@@ -3,7 +3,7 @@
 -- Main entry point for event registration and mod lifecycle
 
 local Context = require("context")
-local MapTag = require("core/map_tag")
+local MapTag = require("core/maptag")
 local ErrorHandler = require("core/utils/error_handler")
 
 -- Main mod event registration and lifecycle management

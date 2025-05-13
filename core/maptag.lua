@@ -6,14 +6,14 @@
 --- @field text string|nil The text for the tag
 --- @field description string|nil Additional text for the tag
 --- @field faved_by_players uint[]
---- @field new fun(chart_tag:LuaCustomChartTag, pos_string: string, player: LuaPlayer, icon: SignalID, text: string, description: string): MapTag|nil
+--- @field new fun(chart_tag:LuaCustomChartTag, pos_string: string, player: LuaPlayer, is_favorite:boolean, icon: SignalID, text: string, description: string): MapTag|nil
 --- @field is_tag_valid fun(self: MapTag):boolean
 --- @field on_chart_tag_modified fun(event: any)
 local MapTag = {}
 
 local Helpers = require("core.helpers") -- Adjust the path as needed to where your Helpers module is located
 
--- If you previously required 'core/chart_tag', update to 'core/map_tag' in your codebase as needed.
+-- If you previously required 'core/chart_tag', update to 'core/maptag' in your codebase as needed.
 -- All logic and type definitions are now in MapTag.
 
 --- Creates a new MapTag instance
@@ -24,7 +24,7 @@ local Helpers = require("core.helpers") -- Adjust the path as needed to where yo
 -- @param text string|nil
 -- @param description string|nil
 -- @return MapTag
-function MapTag.new(chart_tag, pos_string, player, icon, text, description)
+function MapTag.new(chart_tag, pos_string, player, is_favorite,icon, text, description)
   if not player then return nil end
   -- 'tag' is optional; handle nil as needed
   if not chart_tag then
@@ -40,13 +40,18 @@ function MapTag.new(chart_tag, pos_string, player, icon, text, description)
     if not chart_tag then return nil end
   end
 
+  local faved_by_players = {}
+  if is_favorite == true then
+    table.insert(faved_by_players, player.index)
+  end
+
   return {
     pos_string = pos_string,
     tag = chart_tag,
     created_by = player.index,
     text = text,
     description = description,
-    faved_by_players = { player.index }
+    faved_by_players = faved_by_players
   }
 end
 

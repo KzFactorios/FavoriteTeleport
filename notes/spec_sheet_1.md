@@ -96,7 +96,7 @@ This is just my first stab at structure. If you see a better way, please feel fr
     
     surfaces = {
         [surface_index] = {
-          map_tags = {
+          maptags = {
             -- ext_tag objects are to be cached for the surface
               -- these are shared by all players
               tag, -- LuaCustomChartTag
@@ -190,14 +190,14 @@ log all mod errors to the factorio-current.log
 
 - create a function or structure in the control.lua (call it on_first_tick) that will run once for each player when they begin the game either by starting a new game or when loading a save file.
 
-- all players should be able to change all favorites they own. map_tags should only be editable by the creator, with the exception that every player should be able to make any map_tag a favorite of their own even if created by another player. This is achieved by adding the player's index to the faved_by_players table. This allows for one list of map_tags per surface. If a player tries to edit another players map_tag, there should be mechanisms in place to disallow editing other than being able to favorite that location
+- all players should be able to change all favorites they own. maptags should only be editable by the creator, with the exception that every player should be able to make any maptag a favorite of their own even if created by another player. This is achieved by adding the player's index to the faved_by_players table. This allows for one list of maptags per surface. If a player tries to edit another players maptag, there should be mechanisms in place to disallow editing other than being able to favorite that location
 -no need for player permissions beyond what has already been mentioned. 
 
 - as this is a new project, there is no need to tackle migrations just yet
 
 - plan for localization. If opportunities for locale specific phrasing is in order, create the proper entries. Place all of the necessary .cfg files into a folder name locale\en. This folder should contain a settings.cfg, controls.cfg and strings.cfg. All user facing strings should be localized. Use the local\en folder
 
-- wherever possible, use caching strategies to mitigate performance issues. Map_tags could be accessed frequently, so develop a strategy to aid performance. 
+- wherever possible, use caching strategies to mitigate performance issues. MapTags could be accessed frequently, so develop a strategy to aid performance. 
 
 - this project will be debugged in vscode
 
@@ -222,15 +222,15 @@ log all mod errors to the factorio-current.log
     - the tag editor_GUI opens and has a cancel and confirm button on the bottom
     - a button on the top row displays the coordinates that were clicked and allows for direct teleportation to that location. The gui will close after teleporting
     - the tag editor also allows for editing of the tag's data: text, icon, description and display_description. 
-    - The text field allows for an icon to be placed into the text. the text and icon fields are stored in the tag object while the description is stored in the map_tag
+    - The text field allows for an icon to be placed into the text. the text and icon fields are stored in the tag object while the description is stored in the maptag
     - the cancel button will disregard any changes and close the gui
-    - the confirm button will create or update a map_tag. Check for the value "-0" which should always be converted to 0. x and y coords should always allow for at least 3 digits in this field. eg: 000.-1350
-    - map_tag coords are unique. It should not be possible to have more than one map_tag per position
+    - the confirm button will create or update a maptag. Check for the value "-0" which should always be converted to 0. x and y coords should always allow for at least 3 digits in this field. eg: 000.-1350
+    - maptag coords are unique. It should not be possible to have more than one maptag per position
   2. User left-clicks on an existing chart tag in render_mode = chart_view
-    - this should bring up the stock editor. No gui from our mod to display, instead our mod listens to the on_chart_tag_modified event and updates any matching map_tags
+    - this should bring up the stock editor. No gui from our mod to display, instead our mod listens to the on_chart_tag_modified event and updates any matching maptags
   3. User right-clicks on a chart tag in render_mode = chart_view
-    - the tag editor opens and is populated with the information for that map_tag
-    - upon confirm, the information will be saved back to the map_tag and the gui will close
+    - the tag editor opens and is populated with the information for that maptag
+    - upon confirm, the information will be saved back to the maptag and the gui will close
     
 ##### favorites bar
 1. User left clicks on the red heart button. 
