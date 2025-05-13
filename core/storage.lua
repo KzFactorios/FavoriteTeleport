@@ -79,7 +79,7 @@ Storage._data = storage = {
                 faved_by_players {
                   list of player indices that have favorited this position
                 },
-                display_text,
+                description,
                 display_description
               }
           }

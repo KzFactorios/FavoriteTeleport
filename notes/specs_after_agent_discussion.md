@@ -20,7 +20,7 @@
 
 4. **Performance/Caching Strategy**
    - No cache invalidation strategies or refresh/clear cache details.
-   the surface.chart_tags collection will be refreshed whenever a player adds a new chart_tag. This will involve deleting the collection and rebuilding in a getter function
+   the surface.chart_tags collection will be refreshed whenever a player adds a new map_tag. This will involve deleting the collection and rebuilding in a getter function
    - No memory usage considerations for large multiplayer games.
    - We will address this issue later on
 

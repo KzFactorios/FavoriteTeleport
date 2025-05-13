@@ -69,8 +69,7 @@ per-player settings and access to player settings
 
 - **Typical structure:**
 This is just my first stab at structure. If you see a better way, please feel free to chime in.
-Chart_tag is a structure that is returned from the call player.force.find_chart_tags(player.physical_surface_index). Use the same structure/fields for our chart_tags as returned by  that call.
-ext_tag does not need created_at or last_modified fields. See https://lua-api.factorio.com/stable/classes/LuaCustomChartTag.html for the structure of a chart_tag
+
   ```lua
   storage = {
     mod_version = 0.0.01,
@@ -97,23 +96,16 @@ ext_tag does not need created_at or last_modified fields. See https://lua-api.fa
     
     surfaces = {
         [surface_index] = {
-          chart_tags = {
-            {
-              -- chart_tag objects are to be cached for the surface
-              -- these are shared by all players
-              -- this collection is constructed by calling player.force.findd_chart_tags(surface_index)
-            }
-          },
-          ext_tags = {
+          map_tags = {
             -- ext_tag objects are to be cached for the surface
               -- these are shared by all players
-              ext_tag = {
+              tag, -- LuaCustomChartTag
                 pos_string,
                 faved_by_players {
                   list of player indices that have favorited this position
                 },
-                display_text,
-                display_description
+                text
+                description,
               }
           }
         }
@@ -123,8 +115,6 @@ ext_tag does not need created_at or last_modified fields. See https://lua-api.fa
     ... -- other global mod data
   }
   ```
-
-chart_tags have a 1-1 relationship with ext_tags. chart tags do not necessarily require an ext_tag, but an ext_tag will always be linked to a chart_tag. The ext_tags should cascade delete
 
 a players' favorites are scoped to the current player's surface only
 
@@ -200,14 +190,14 @@ log all mod errors to the factorio-current.log
 
 - create a function or structure in the control.lua (call it on_first_tick) that will run once for each player when they begin the game either by starting a new game or when loading a save file.
 
-- all players should be able to change all favorites they own. chart_tags should only be editable by the creator, with the exception that every player should be able to make any chart tag a favorite of their own even if created by another player. ext_tags will track, via the faved_by_players list, what users have favorited the location. This allows for one list of chart_tags and ext_tags per surface. If a player tries to edit another players chart_tag, there should be mechanisms in place to disallow editing other than being able to favorite that location
+- all players should be able to change all favorites they own. map_tags should only be editable by the creator, with the exception that every player should be able to make any map_tag a favorite of their own even if created by another player. This is achieved by adding the player's index to the faved_by_players table. This allows for one list of map_tags per surface. If a player tries to edit another players map_tag, there should be mechanisms in place to disallow editing other than being able to favorite that location
 -no need for player permissions beyond what has already been mentioned. 
 
 - as this is a new project, there is no need to tackle migrations just yet
 
 - plan for localization. If opportunities for locale specific phrasing is in order, create the proper entries. Place all of the necessary .cfg files into a folder name locale\en. This folder should contain a settings.cfg, controls.cfg and strings.cfg. All user facing strings should be localized. Use the local\en folder
 
-- wherever possible, use caching strategies to mitigate performance issues. Chart_tags and ext_tags could be accessed frequently, so develop a strategy to aid performance. 
+- wherever possible, use caching strategies to mitigate performance issues. Map_tags could be accessed frequently, so develop a strategy to aid performance. 
 
 - this project will be debugged in vscode
 
@@ -231,22 +221,22 @@ log all mod errors to the factorio-current.log
   1. User right-clicks in render_mode = chart_view
     - the tag editor_GUI opens and has a cancel and confirm button on the bottom
     - a button on the top row displays the coordinates that were clicked and allows for direct teleportation to that location. The gui will close after teleporting
-    - the tag editor also allows for editing of the tag's data: text, icon, display_text and display_description. 
-    - The text field allows for an icon to be placed into the text. the text and icon fields are stored in the chart_tag object while the display_text and display_description are stored in the corresponding ext_tag
+    - the tag editor also allows for editing of the tag's data: text, icon, description and display_description. 
+    - The text field allows for an icon to be placed into the text. the text and icon fields are stored in the tag object while the description is stored in the map_tag
     - the cancel button will disregard any changes and close the gui
-    - the confirm button will create or update a chart_tag and a corresponding ext_tag matched by the position string which is simplay a string representing the x coordinate, then a dot, then the y coordinate. Check for the value "-0" which should always be converted to 0. x and y coords should always allow for at least 3 digits in this field. eg: 000.-1350
-    - chart_tag coords must be unique. It should not be possible to have more than one chart_tag or ext_tag per position
+    - the confirm button will create or update a map_tag. Check for the value "-0" which should always be converted to 0. x and y coords should always allow for at least 3 digits in this field. eg: 000.-1350
+    - map_tag coords are unique. It should not be possible to have more than one map_tag per position
   2. User left-clicks on an existing chart tag in render_mode = chart_view
-    - this should bring up the stock editor. No gui from our mod to display, instead our mod listens to the on_chart_tag_modified event and updates any matching chart_tags and corresponding ext_tag
+    - this should bring up the stock editor. No gui from our mod to display, instead our mod listens to the on_chart_tag_modified event and updates any matching map_tags
   3. User right-clicks on a chart tag in render_mode = chart_view
-    - the tag editor opens and is populated with the information for that chart_tag and its corresponding ext_tag
-    - upon confirm, the information will be saved back to the chart_tag and ext_tag and the gui will close
+    - the tag editor opens and is populated with the information for that map_tag
+    - upon confirm, the information will be saved back to the map_tag and the gui will close
     
 ##### favorites bar
 1. User left clicks on the red heart button. 
 - This toggles the show_fav_bar_buttons value and the favorites_gui shows or hides the remaining slot buttons according to the state of show_fav_bar_buttons
 2. User hovers over a slot.
-- a tooltip is shown with the text of the chart_tag and on the next line, the position, converted to a pos_string
+- a tooltip is shown with the text of the chart_tag and on the next line, the position, converted to a pos_string. the third line should be a snippet of the description - max 25 chars
 3. User left-clicks on a favorite slot
 - The player is instantly teleported to the favorite location
 4. User right-clicks on a favorite slot
