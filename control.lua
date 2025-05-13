@@ -2,14 +2,25 @@
 -- control.lua
 -- Main entry point for event registration and mod lifecycle
 
-local Context = require("context")
+local Context = require("core/context")
 local MapTag = require("core/maptag")
 local ErrorHandler = require("core/utils/error_handler")
+local Constants = require("constants")
+local FaveBarGUI = require("gui/fave_bar_GUI")
+local TagEditorGUI = require("gui/tag_editor_GUI")
+local Storage = require("core/storage")
+
+local Control = {}
+
+local RESPONSIVE_TICKS = 30 * 1
 
 -- Main mod event registration and lifecycle management
 
 script.on_init(function()
-  -- TODO: Initialize global data, GUIs, etc.
+  Context.init()
+  for _, player in pairs(game.players) do
+    FaveBarGUI.build(player)
+  end
 end)
 
 script.on_load(function()
@@ -17,7 +28,7 @@ script.on_load(function()
 end)
 
 script.on_configuration_changed(function(event)
---[[if event.mod_changes and event.mod_changes["FavoriteTeleport"] then
+  --[[if event.mod_changes and event.mod_changes["FavoriteTeleport"] then
     local changes = event.mod_changes["FavoriteTeleport"]
 
     -- this condition indicates the mod was removed
@@ -54,34 +65,37 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
   local setting_name = event.setting
   local setting_type = event.setting_type
 
-  if setting_type == "runtime-per-user" and setting_name == PREFIX .. "favorites-on" then
+  if setting_type == "runtime-per-user" and setting_name == Constants.settings.FAVORITES_ON then
     --control.apply_favorites_on_off_state(player)
-    --control.update_uis(player)
+    --control.update_guis(player)
   end
 end)
 
 script.on_event(defines.events.on_chart_tag_modified, function(event)
-    MapTag.on_chart_tag_modified(event)
+  MapTag.on_chart_tag_modified(event)
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
---STUB
+  local player = game.get_player(event.player_index)
+  if player then
+    FaveBarGUI.build(player)
+  end
 end)
 
 script.on_event(defines.events.on_player_joined_game, function(event)
---STUB
+  --STUB
 end)
 
 script.on_event(defines.events.on_player_left_game, function(event)
--- cleanup player's data?
+  -- cleanup player's data?
 end)
 
 script.on_event(defines.events.on_player_removed, function(event)
--- cleanup player's data?
+  -- cleanup player's data?
 end)
 
-script.on_event(defines.events.script_raised_teleported, function(event) 
--- STUB
+script.on_event(defines.events.script_raised_teleported, function(event)
+  -- STUB
 end)
 
 script.on_event(defines.events.on_player_changed_force, function(event)
@@ -107,7 +121,7 @@ end)
 
 -- set events for hotkeys
 for i = 1, 10 do
-  script.on_event(prototypes.custom_input[PREFIX .. "teleport-to-fave-" .. i], function(event)
+  script.on_event(Constants.events.TELEPORT_TO_FAVORITE .. i, function(event)
     ---@diagnostic disable-next-line: undefined-field
     local player = game.get_player(event.player_index)
     if not player then return end
@@ -124,6 +138,44 @@ for i = 1, 10 do
   end)
 end
 
+-- Register a custom input for right-click in chart view to open the tag editor
+script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
+  -- Defensive: iterate event table to find player_index
+  local player_index = nil
+  for k, v in pairs(event) do
+    if tostring(k) == "player_index" then
+      player_index = v
+      break
+    end
+  end
+  if not player_index then return end
+  local player = game.get_player(player_index)
+  if not player then return end
+  -- Ignore right-clicks in render_mode.game or render_mode.chart_zoomed_in
+  if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
+    return
+  end
+  ---@diagnostic disable-next-line: undefined-field
+  TagEditorGUI.open(player, event.cursor_position)
+end)
+
+script.on_event(Constants.events.STORAGE_DUMP, function(event)
+  ---@diagnostic disable-next-line: undefined-field
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  local storage = remote.call("FavoriteTeleport", "get_storage")
+  if type(storage) ~= "table" then
+    player.print("[FavoriteTeleport] Storage is not a table! Type: " .. type(storage))
+    return
+  end
+  if serpent then
+    player.print(serpent.block(storage, { comment = false }))
+  else
+    for k, v in pairs(storage) do
+      player.print(tostring(k) .. ": " .. tostring(v))
+    end
+  end
+end)
 
 local _startup = nil
 
@@ -131,14 +183,12 @@ script.on_event(defines.events.on_tick, function(event)
   if not _startup then
     for _, player in pairs(game.players) do
       if not player then return end
-      control.update_uis(player)
+      Control.update_guis(player)
     end
     startup = 1
   end
   script.on_event(defines.events.on_tick, nil)
 end)
-
-local RESPONSIVE_TICKS = 30 * 1
 
 script.on_nth_tick(RESPONSIVE_TICKS, function(event)
   if not game then return end
@@ -150,7 +200,107 @@ script.on_nth_tick(RESPONSIVE_TICKS, function(event)
   end
 end)
 
+script.on_event(defines.events.on_gui_click, function(event)
+  if not event or not event.element or not event.element.valid then return end
+  -- Handle Tag Editor GUI close buttons
+  if event.element.name == "ft_tag_editor_close_btn" or event.element.name == "ft_tag_editor_close_x" then
+    if not event.player_index then return end
+    local player = game.get_player(event.player_index)
+    if player then
+      TagEditorGUI.close(player)
+    end
+    return
+  end
+  -- Handle FaveBarGUI button clicks (if needed)
+  -- Add more GUI event handling here as you expand the GUIs
+end)
+
+local function destroy_tag_editor_frame(player)
+  if player then
+    for _, element in pairs(player.gui.screen.children) do
+      if element.name == "ft_tag_editor_frame" then
+        element.destroy()
+        break
+      end
+    end
+  end
+end
+
+script.on_event(defines.events.on_player_changed_surface, function(event)
+  local player = game.get_player(event.player_index)
+  destroy_tag_editor_frame(player)
+end)
+
+script.on_event(defines.events.on_player_changed_position, function(event)
+  local player = game.get_player(event.player_index)
+  destroy_tag_editor_frame(player)
+end)
+
+script.on_event(defines.events.on_player_toggled_map_editor, function(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  destroy_tag_editor_frame(player)
+end)
+
+-- This occurs when a player switches between different controller modes,
+--- such as moving from character control to god mode, spectator mode,
+--- or any other available controller type in the game
+--- ie: fave bar should only show in game mode
+script.on_event(defines.events.on_player_controller_changed, function(event)
+  if game then
+    local player = game.get_player(event.player_index)
+    if not player then return end
+
+    -- if we are not in regular/game view and a fave bar exists
+    if player.render_mode == defines.render_mode.game then
+      destroy_tag_editor_frame(player)
+    end
+  end
+end)
+
+local function check_and_handle_render_mode_change(player)
+  if not player then return end
+  local pdata = Context.get_player_data(player.index)
+  if not pdata then return end
+  local last_mode = pdata.render_mode
+  local current_mode = player.render_mode
+  if last_mode ~= current_mode then
+    -- Update tracked render_mode
+    pdata.render_mode = current_mode
+    -- Handle leaving map view: close tag editor if switching to game mode
+    if current_mode == defines.render_mode.game then
+      for _, element in pairs(player.gui.screen.children) do
+        if element.name == "ft_tag_editor_frame" then
+          element.destroy()
+          break
+        end
+      end
+    end
+    -- You can add more logic here for entering/leaving other modes
+  end
+end
+
+script.on_nth_tick(RESPONSIVE_TICKS, function(event)
+  for _, player in pairs(game.connected_players) do
+    check_and_handle_render_mode_change(player)
+  end
+end)
+
 -- TODO: Register additional event handlers for player actions, GUI, etc.
 
-return {}
+function Control.close_guis(player)
+  -- TODO handle any other frames
+  destroy_tag_editor_frame(player)
+end
 
+function Control.update_guis(player)
+  -- TODO implementation
+end
+
+remote.add_interface("FavoriteTeleport", {
+  get_storage = function()
+    return Storage.get()
+  end
+})
+
+return Control

@@ -8,9 +8,9 @@ A Factorio mod that enhances map tag management and teleportation, providing a f
 ## Key Features
 - **Quick Teleportation:** Hotkeys to teleport to favorite map tag locations. Ctrl + [number] (1,2,3,4,5,6,7,8,9,0). 0 acts as 10. 
 
-- **favorites_GUI:** Custom GUI for managing and selecting favorite locations. The player can have 10 favorite locations/slots per surface. It would be a plus for the max number of slots to be handled dynamically in the user settings. The favorites bar will only ever show the favorites for the current surface. The favorites bar shows the slots, horizontally in the top gui, with small icons, if defined, for each favorite on the surface. There is an additional first slot with the icon of a red heart. This red heart icon will toggle the display of the remaining buttons and is tied to the user_data[show_fave_bar_buttons] It also shows the slot number for easy navigation (ie corresponds to the hotkey number for the slot). A left click on the slot immediately teleports the player to the favorites location. A right click on a slot will open a dialog, Fave_Edit_GUI in the gui.screen. Icons for each fave are to be shown in each slot. each slot should be 32px x 32px
+- **favorites_GUI:** Custom GUI for managing and selecting favorite locations. The player can have 10 favorite locations/slots per surface. It would be a plus for the max number of slots to be handled dynamically in the user settings. The favorites bar will only ever show the favorites for the current surface. The favorites bar shows the slots, horizontally in the top gui, with small icons, if defined, for each favorite on the surface. There is an additional first slot with the icon of a red heart. This red heart icon will toggle the display of the remaining buttons and is tied to the user_data[show_fave_bar_buttons] It also shows the slot number for easy navigation (ie corresponds to the hotkey number for the slot). A left click on the slot immediately teleports the player to the favorites location. A right click on a slot will open a dialog, fave_editor_GUI in the gui.screen. Icons for each fave are to be shown in each slot. each slot should be 32px x 32px
 
-- **editor_GUI:** Custom GUI for adding, editing, and removing map tags. Should show the current icon for the tag as 50px x 50px in a picker where another icon can be selected with ease
+- **fave_editor_GUI:** Custom GUI for adding, editing, and removing map tags. Should show the current icon for the tag as 50px x 50px in a picker where another icon can be selected with ease
 
 - **Uses the existing map tag editor** Not all functionality can be implemented in our custom guis. 
 
@@ -31,7 +31,7 @@ A Factorio mod that enhances map tag management and teleportation, providing a f
 ### 2. GUI Modules
 - **`fave_bar_GUI.lua`**: Handles displaying the current favorites for the current surface. Handles events triggered by slot interaction - right-click, left-click. Implement drag and drop within the favorites bar to order and reorder favorites
 
-- **`editor_GUI.lua`**: Manages a GUI to add and update map tags.
+- **`tag_editor_GUI.lua`**: Manages a GUI to add and update map tags.
 
 ### 3. `context.lua`
 - **Persistent data storage and schema management.**
@@ -219,7 +219,7 @@ log all mod errors to the factorio-current.log
   #### user flows
   ##### map view operations
   1. User right-clicks in render_mode = chart_view
-    - the tag editor_GUI opens and has a cancel and confirm button on the bottom
+    - the tag_editor_GUI opens and has a cancel and confirm button on the bottom
     - a button on the top row displays the coordinates that were clicked and allows for direct teleportation to that location. The gui will close after teleporting
     - the tag editor also allows for editing of the tag's data: text, icon, description and display_description. 
     - The text field allows for an icon to be placed into the text. the text and icon fields are stored in the tag object while the description is stored in the maptag
@@ -234,13 +234,13 @@ log all mod errors to the factorio-current.log
     
 ##### favorites bar
 1. User left clicks on the red heart button. 
-- This toggles the show_fav_bar_buttons value and the favorites_gui shows or hides the remaining slot buttons according to the state of show_fav_bar_buttons
+- This toggles the show_fav_bar_buttons value and the fave_bar_gui shows or hides the remaining slot buttons according to the state of show_fav_bar_buttons
 2. User hovers over a slot.
 - a tooltip is shown with the text of the chart_tag and on the next line, the position, converted to a pos_string. the third line should be a snippet of the description - max 25 chars
 3. User left-clicks on a favorite slot
 - The player is instantly teleported to the favorite location
 4. User right-clicks on a favorite slot
-- The editor_GUI appears with the information for the selected favorite and allows editing as described prior
+- The tag_editor_GUI appears with the information for the selected favorite and allows editing as described prior
 5. User clicks and drags a favorite slot
 - the red heart slot is not available for this operation
 - if the selection is dropped, than the order of the favorites should be updated to reflect the new order and the favorites bar should show the new order

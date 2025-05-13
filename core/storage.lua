@@ -22,7 +22,7 @@ end
 -- @param player_index integer
 function Storage.get_player_data(player_index)
   local storage = Storage.get()
-  storage.players[player_index] = storage.players[player_index] or {}
+  storage.players[player_index] = storage.players[player_index] or {}  
   return storage.players[player_index]
 end
 

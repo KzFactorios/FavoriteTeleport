@@ -11,7 +11,7 @@
 --- @field on_chart_tag_modified fun(event: any)
 local MapTag = {}
 
-local Helpers = require("core.helpers") -- Adjust the path as needed to where your Helpers module is located
+local Helpers = require("core.utils.helpers") -- Adjust the path as needed to where your Helpers module is located
 
 -- If you previously required 'core/chart_tag', update to 'core/maptag' in your codebase as needed.
 -- All logic and type definitions are now in MapTag.
@@ -48,7 +48,7 @@ function MapTag.new(chart_tag, pos_string, player, is_favorite,icon, text, descr
   return {
     pos_string = pos_string,
     tag = chart_tag,
-    created_by = player.index,
+    created_by = player.name,
     text = text,
     description = description,
     faved_by_players = faved_by_players
