@@ -168,9 +168,13 @@ function TagEditorGUI.open(player, position, is_favorite)
     type = "button",
     name = "ft_tag_editor_save_btn",
     caption = {"FavoriteTeleport.ft_tag_editor_save"},
-    style = "ft_confirm_button"
+    style = "ft_confirm_button",
+    enabled = false,
+    tooltip = {"FavoriteTeleport.ft_tag_editor_save_tooltip"}
   }
   save_btn.style.horizontal_align = "center"
+
+  -- Enable/disable save button based on text or icon (now handled in control.lua)
 
   player.opened = outer_frame
   if outer_frame.force_auto_center then

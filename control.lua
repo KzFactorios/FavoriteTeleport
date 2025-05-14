@@ -160,7 +160,6 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   TagEditorGUI.open(player, event.cursor_position)
 end)
 
-
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
   ---@diagnostic disable-next-line: undefined-field
   local player = game.get_player(event.player_index)
@@ -217,6 +216,35 @@ script.on_event(defines.events.on_gui_click, function(event)
   
   -- Handle FaveBarGUI button clicks (if needed)
   -- Add more GUI event handling here as you expand the GUIs
+end)
+
+-- Tag Editor GUI: Enable/disable save button based on text or icon
+script.on_event(defines.events.on_gui_text_changed, function(event)
+  if not event or not event.element or not event.element.valid then return end
+  if event.element.name ~= "ft_tag_editor_textbox" then return end
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  local frame = player.gui.screen.ft_tag_editor_outer_frame
+  if not frame then return end
+  local save_btn = frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
+  local icon_picker = frame.ft_tag_editor_frame.ft_tag_editor_icon_row["tag-editor-icon"]
+  local text_val = event.element.text and event.element.text:match("%S")
+  local icon_val = icon_picker and icon_picker.elem_value
+  save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
+end)
+
+script.on_event(defines.events.on_gui_elem_changed, function(event)
+  if not event or not event.element or not event.element.valid then return end
+  if event.element.name ~= "tag-editor-icon" then return end
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  local frame = player.gui.screen.ft_tag_editor_outer_frame
+  if not frame then return end
+  local save_btn = frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
+  local text_box = frame.ft_tag_editor_frame.ft_tag_editor_text_row.ft_tag_editor_textbox
+  local text_val = text_box and text_box.text and text_box.text:match("%S")
+  local icon_val = event.element.elem_value
+  save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
 end)
 
 local function destroy_tag_editor_frame(player)
