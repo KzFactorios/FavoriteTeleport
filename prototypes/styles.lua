@@ -3,21 +3,60 @@ local PREFIX = require("constants").PREFIX
 ---@diagnostic disable-next-line: undefined-global
 local gui_style = data.raw["gui-style"].default
 
-gui_style[PREFIX .. "toggle_favorite_mode_button"] = {
-  type = "button_style",
-  parent = "slot_button",
-  width = 36,
-  height = 36,
-  top_margin = 2,
-  background_color = { 1, 0, 0 },
-  default_graphical_set = {
-    base = {
-      position = { 64, 0 },
-      width = 32,
-      height = 32,
-      scale = 1.0,
-      filename = "__base__/graphics/icons/signal/signal-heart.png",
+gui_style.te_ip_favorite_label = {
+  type = "label_style",
+  parent = "label",
+  single_line = true,
+  horizontally_stretchable = "off",
+  vertically_stretchable = "off",
+  font = "default-bold",
+  minimal_width = 70,
+  maximal_width = 70,
+  left_margin = 20,
+  vertical_align = "center"
+}
 
-    },
-  }
+gui_style.te_ip_icon_label = {
+  type = "label_style",
+  parent = "label",
+  single_line = true,
+  horizontally_stretchable = "off",
+  vertically_stretchable = "off",
+  font = "default-bold",
+  minimal_width = 50,
+  maximal_width = 50,
+  vertical_align = "center"
+}
+
+gui_style.te_tr_teleport_label = {
+  type = "label_style",
+  parent = "label",
+  single_line = true,
+  horizontally_stretchable = "off",
+  vertically_stretchable = "off",
+  font = "default-bold",
+  minimal_width = 110,
+  maximal_width = 110
+}
+
+gui_style.te_tr_text_label = {
+  type = "label_style",
+  parent = "label",
+  single_line = true,
+  horizontally_stretchable = "off",
+  vertically_stretchable = "off",
+  font = "default-bold",
+  minimal_width = 110,
+  maximal_width = 110
+}
+
+gui_style.te_dr_description_label = {
+  type = "label_style",
+  parent = "label",
+  single_line = true,
+  horizontally_stretchable = "off",
+  vertically_stretchable = "off",
+  font = "default-bold",
+  minimal_width = 110,
+  maximal_width = 110
 }

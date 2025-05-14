@@ -31,7 +31,7 @@ describe("Helpers", function()
   it("converts MapPosition to pos_string", function()
     local map_pos = {x = 65, y = -33}
     local pos_string = Helpers.map_position_to_pos_string(map_pos)
-    assert.equals("065.-33", pos_string)
+    assert.equals("065.-033", pos_string)
   end)
 
   it("converts pos_string with negative zero to MapPosition with zero", function()

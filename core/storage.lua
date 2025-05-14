@@ -6,22 +6,25 @@ local Storage = {}
 
 --- Initializes the storage structure if not present
 function Storage.init()
-  Storage._data = Storage._data or {
-    mod_version = nil,
-    players = {},
-    surfaces = {},
-  }
+  if not Storage._data then
+    Storage._data = {
+      mod_version = nil,
+      players = {},
+      surfaces = {},
+    }
+  end
 end
 
 --- Returns the root storage table
 function Storage.get()
+  if not Storage._data then Storage.init() end
   return Storage._data
 end
 
 --- Returns the player-specific storage table
 -- @param player_index integer
 function Storage.get_player_data(player_index)
-  local storage = Storage.get()
+  local storage = Storage.get()  
   storage.players[player_index] = storage.players[player_index] or {}  
   return storage.players[player_index]
 end

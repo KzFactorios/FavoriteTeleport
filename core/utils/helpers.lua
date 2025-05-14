@@ -42,7 +42,12 @@ end
 -- @param map_pos MapPosition
 -- @return string
 function Helpers.map_position_to_pos_string(map_pos)
-  return string.format("%03d.%s", map_pos.x, tostring(map_pos.y))
+  local function format_coord(n)
+    local abs_n = math.abs(math.floor(n))
+    local sign = n < 0 and "-" or ""
+    return string.format("%s%03d", sign, abs_n)
+  end
+  return string.format("%s.%s", format_coord(map_pos.x), format_coord(map_pos.y))
 end
 
 return Helpers

@@ -25,6 +25,7 @@ end)
 
 script.on_load(function()
   -- TODO: Restore runtime references if needed
+  --Context.init()
 end)
 
 script.on_configuration_changed(function(event)
@@ -37,7 +38,7 @@ script.on_configuration_changed(function(event)
       for _, player in pairs(game.players) do
         add_tag_gui.on_player_removed(player)
         edit_fave_gui.on_player_removed(player)
-        _gui_manager.update_the_fav_bar(player) -- or .on_player_removed if needed
+        -- GuiBase.update_the_fav_bar(player) -- or .on_player_removed if needed (function not present in GuiBase)
       end
       -- Mod is being removed, clean up data
       context.qmtt = nil
@@ -159,6 +160,7 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   TagEditorGUI.open(player, event.cursor_position)
 end)
 
+
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
   ---@diagnostic disable-next-line: undefined-field
   local player = game.get_player(event.player_index)
@@ -190,24 +192,34 @@ script.on_event(defines.events.on_tick, function(event)
   script.on_event(defines.events.on_tick, nil)
 end)
 
-script.on_nth_tick(RESPONSIVE_TICKS, function(event)
+--[[script.on_nth_tick(RESPONSIVE_TICKS, function(event)
   if not game then return end
 
   for _, player in pairs(game.players) do
-    if not player.character then
-      -- TODO control.close_guis(player)
+    if player.character then
+      Control.close_guis(player)
     end
   end
-end)
+end)]]
 
 script.on_event(defines.events.on_gui_click, function(event)
   if not event or not event.element or not event.element.valid then return end
-  -- Handle Tag Editor GUI close buttons
-  if event.element.name == "ft_tag_editor_close_btn" or event.element.name == "ft_tag_editor_close_x" then
+  -- Tag Editor GUI click handling
+  local tag_action = TagEditorGUI.on_click(event)
+  if tag_action == "close" then
     if not event.player_index then return end
     local player = game.get_player(event.player_index)
     if player then
       TagEditorGUI.close(player)
+    end
+    return
+  end
+  if tag_action == "icon_picker" then
+    -- TODO: Open icon picker GUI for the player
+    if not event.player_index then return end
+    local player = game.get_player(event.player_index)
+    if player then
+      player.print("[FT] Icon picker would open here (not yet implemented)")
     end
     return
   end
@@ -218,7 +230,7 @@ end)
 local function destroy_tag_editor_frame(player)
   if player then
     for _, element in pairs(player.gui.screen.children) do
-      if element.name == "ft_tag_editor_frame" then
+      if element.name == "ft_tag_editor_outer_frame" then
         element.destroy()
         break
       end
@@ -265,16 +277,11 @@ local function check_and_handle_render_mode_change(player)
   local last_mode = pdata.render_mode
   local current_mode = player.render_mode
   if last_mode ~= current_mode then
-    -- Update tracked render_mode
     pdata.render_mode = current_mode
     -- Handle leaving map view: close tag editor if switching to game mode
     if current_mode == defines.render_mode.game then
-      for _, element in pairs(player.gui.screen.children) do
-        if element.name == "ft_tag_editor_frame" then
-          element.destroy()
-          break
-        end
-      end
+      local frame = player.gui.screen.ft_tag_editor_outer_frame
+      if frame then frame.destroy() end
     end
     -- You can add more logic here for entering/leaving other modes
   end
