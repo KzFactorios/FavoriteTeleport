@@ -247,6 +247,20 @@ script.on_event(defines.events.on_gui_elem_changed, function(event)
   save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
 end)
 
+-- Close tag editor GUI if ESC is pressed
+script.on_event(defines.events.on_gui_closed, function(event)
+  if not event or not event.element or not event.player_index then return end
+  if event.element.name == "ft_tag_editor_outer_frame" and event.gui_type == defines.gui_type.custom then
+    local player = game.get_player(event.player_index)
+    if player then
+      local gui = player.gui.screen
+      if gui.ft_tag_editor_outer_frame then
+        gui.ft_tag_editor_outer_frame.destroy()
+      end
+    end
+  end
+end)
+
 local function destroy_tag_editor_frame(player)
   if player then
     for _, element in pairs(player.gui.screen.children) do
