@@ -214,15 +214,7 @@ script.on_event(defines.events.on_gui_click, function(event)
     end
     return
   end
-  if tag_action == "icon_picker" then
-    -- TODO: Open icon picker GUI for the player
-    if not event.player_index then return end
-    local player = game.get_player(event.player_index)
-    if player then
-      player.print("[FT] Icon picker would open here (not yet implemented)")
-    end
-    return
-  end
+  
   -- Handle FaveBarGUI button clicks (if needed)
   -- Add more GUI event handling here as you expand the GUIs
 end)

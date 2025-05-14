@@ -76,34 +76,30 @@ function TagEditorGUI.open(player, position, is_favorite)
 
   -- Teleport row
   local teleport_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_teleport_row"}
-  teleport_row.add{
+  teleport_row.style.vertical_align = "center"
+  local teleport_label = teleport_row.add{
     type = "label",
     caption = {"FavoriteTeleport.ft_tag_editor_teleport"},
     style = "te_tr_teleport_label"
   }
+  teleport_label.style.vertical_align = "center"
   local pos_string = position and Helpers.map_position_to_pos_string(position) or "[no pos]"
-  teleport_row.add{
+  local teleport_btn = teleport_row.add{
     type = "button",
     name = "ft_tag_editor_pos_btn",
     caption = pos_string,
-    style = "red_button",
-    style_mods = {width=160, horizontally_stretchable=false}
+    style = "ft_teleport_button"
   }
+  teleport_btn.style.horizontal_align = "center"
+  teleport_btn.style.vertical_align = "center"
 
-  -- Icon picker row
-  local icon_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_icon_row"}
-  icon_row.style.top_margin = 8
-  icon_row.add{type = "label", caption = {"FavoriteTeleport.ft_tag_editor_icon"}, style = "te_ip_icon_label"}
-  icon_row.add{
-    type = "choose-elem-button",
-    name = "tag-editor-icon",
-    elem_type = "signal",
-    signal = nil,
-    tooltip = {"FavoriteTeleport.ft_tag_editor_icon_tooltip"},
-    style_mods = {width=36, height=36, horizontally_stretchable=false}
-  }
-  icon_row.add{type = "label", caption = {"FavoriteTeleport.ft_tag_editor_favorite_label"}, style = "te_ip_favorite_label", style_mods = {left_margin=20}}
-  icon_row.add{
+  -- Favorite row
+  local favorite_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_favorite_row"}
+  favorite_row.style.top_margin = 8
+  favorite_row.style.vertical_align = "center"
+  local favorite_label = favorite_row.add{type = "label", caption = {"FavoriteTeleport.ft_tag_editor_favorite_label"}, style = "te_tr_favorite_label"}
+  favorite_label.style.vertical_align = "center"
+  favorite_row.add{
     type = "sprite-button",
     name = "ft_tag_editor_favorite_btn",
     sprite = is_favorite and "utility/check_mark_green" or nil,
@@ -112,10 +108,27 @@ function TagEditorGUI.open(player, position, is_favorite)
     style_mods = {width=36, height=36, left_margin=20, horizontally_stretchable=false}
   }
 
+  -- Icon picker row
+  local icon_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_icon_row"}
+  icon_row.style.top_margin = 8
+  icon_row.style.vertical_align = "center"
+  local icon_label = icon_row.add{type = "label", caption = {"FavoriteTeleport.ft_tag_editor_icon"}, style = "te_tr_icon_label"}
+  icon_label.style.vertical_align = "center"
+  local icon_picker = icon_row.add{
+    type = "choose-elem-button",
+    name = "tag-editor-icon",
+    elem_type = "signal",
+    signal = nil,
+    tooltip = {"FavoriteTeleport.ft_tag_editor_icon_tooltip"},
+    style_mods = {width=36, height=36, left_margin=30, horizontally_stretchable=false}
+  }
+
   -- Text row
   local text_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_text_row"}
   text_row.style.top_margin = 8
-  text_row.add{type="label", caption={"FavoriteTeleport.ft_tag_editor_text"}, style="te_tr_text_label"}
+  text_row.style.vertical_align = "center"
+  local text_label = text_row.add{type="label", caption={"FavoriteTeleport.ft_tag_editor_text"}, style="te_tr_text_label"}
+  text_label.style.vertical_align = "center"
   local text_box = text_row.add{
     type = "textfield",
     name = "ft_tag_editor_textbox",
@@ -128,7 +141,9 @@ function TagEditorGUI.open(player, position, is_favorite)
   -- Description row
   local desc_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_desc_row"}
   desc_row.style.top_margin = 8
-  desc_row.add{type="label", caption={"FavoriteTeleport.ft_tag_editor_desc"}, style="te_dr_description_label"}
+  desc_row.style.vertical_align = "center"
+  local desc_label = desc_row.add{type="label", caption={"FavoriteTeleport.ft_tag_editor_desc"}, style="te_tr_desc_label"}
+  desc_label.style.vertical_align = "center"
   local desc_box = desc_row.add{
     type = "textfield",
     name = "ft_tag_editor_descbox",
@@ -142,20 +157,20 @@ function TagEditorGUI.open(player, position, is_favorite)
 
   -- Action buttons row
   local action_row = frame.add{type="flow", direction="horizontal", name="ft_tag_editor_action_row"}
-  action_row.style.top_margin = 8
+  action_row.style.top_margin = 24
   action_row.add{
     type = "button",
     name = "ft_tag_editor_cancel_btn",
     caption = {"FavoriteTeleport.ft_tag_editor_cancel"},
-    style_mods = {width=100, horizontally_stretchable=false}
+    style = "ft_cancel_button"
   }
-  action_row.add{
+  local save_btn = action_row.add{
     type = "button",
     name = "ft_tag_editor_save_btn",
     caption = {"FavoriteTeleport.ft_tag_editor_save"},
-    style = "confirm_button",
-    style_mods = {width=100, left_margin=40, horizontally_stretchable=false}
+    style = "ft_confirm_button"
   }
+  save_btn.style.horizontal_align = "center"
 
   player.opened = outer_frame
   if outer_frame.force_auto_center then
