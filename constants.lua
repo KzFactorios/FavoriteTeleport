@@ -9,6 +9,7 @@ local PRE = constants.PREFIX
 constants.TELEPORT_RADIUS_DEFAULT = 8
 constants.TELEPORT_RADIUS_MIN = 1
 constants.TELEPORT_RADIUS_MAX = 64
+constants.MAX_FAVORITE_SLOTS = 10
 
 constants.events = {
   --ADD_TAG_INPUT = PRE .. "add-tag-input",

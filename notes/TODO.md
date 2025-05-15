@@ -8,3 +8,5 @@
 - [ ] Implement GUI desync detection and recovery (see notes/specs_after_agent_discussion.md).
 - [ ] Add localization for any new user-facing strings.
 - [ ] Document any further style or layout tweaks in this file for future reference.
+- [ ] Test for the display of unforeseen large strings - player names, 
+- [ ] Check limits on size for chart tag text

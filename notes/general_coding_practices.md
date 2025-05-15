@@ -1,0 +1,1 @@
+I prefer a blank line above any comment blocks unless they are the top of the page. Successive single line comments should be treated as a block.

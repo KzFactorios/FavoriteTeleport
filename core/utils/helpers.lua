@@ -42,6 +42,10 @@ end
 -- @param map_pos MapPosition
 -- @return string
 function Helpers.map_position_to_pos_string(map_pos)
+  if not map_pos then
+    -- Log or handle the nil map_pos case here if needed
+    return "nil"
+  end
   local function format_coord(n)
     local abs_n = math.abs(math.floor(n))
     local sign = n < 0 and "-" or ""

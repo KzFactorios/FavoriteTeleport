@@ -48,7 +48,7 @@ function MapTag.new(chart_tag, pos_string, player, is_favorite,icon, text, descr
   return {
     pos_string = pos_string,
     tag = chart_tag,
-    created_by = player.name,
+    created_by = player.name, -- Always use player.name for created_by (not index)
     text = text,
     description = description,
     faved_by_players = faved_by_players

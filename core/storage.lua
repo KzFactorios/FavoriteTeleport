@@ -37,6 +37,46 @@ function Storage.get_surface_data(surface_index)
   return storage.surfaces[surface_index]
 end
 
+--- Called when a player leaves the game; cleans up their tag ownership and favorites
+-- @param player_index integer
+-- @param player_name string
+function Storage.on_player_left(player_index, player_name)
+  local storage = Storage.get()
+  -- Remove player_index from all faved_by_players and set last_user to nil if owned
+  for surface_index, surface_data in pairs(storage.surfaces) do
+    -- Clean up chart_tags
+    if surface_data.chart_tags then
+      for _, tag in pairs(surface_data.chart_tags) do
+        if tag.last_user == player_name then
+          tag.last_user = nil
+        end
+        if tag.faved_by_players then
+          for i = #tag.faved_by_players, 1, -1 do
+            if tag.faved_by_players[i] == player_index then
+              table.remove(tag.faved_by_players, i)
+            end
+          end
+        end
+      end
+    end
+    -- Clean up ext_tags if present
+    if surface_data.ext_tags then
+      for _, tag in pairs(surface_data.ext_tags) do
+        if tag.last_user == player_name then
+          tag.last_user = nil
+        end
+        if tag.faved_by_players then
+          for i = #tag.faved_by_players, 1, -1 do
+            if tag.faved_by_players[i] == player_index then
+              table.remove(tag.faved_by_players, i)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
 return Storage
 
 --[[

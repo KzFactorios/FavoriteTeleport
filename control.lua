@@ -9,6 +9,7 @@ local Constants = require("constants")
 local FaveBarGUI = require("gui/fave_bar_GUI")
 local TagEditorGUI = require("gui/tag_editor_GUI")
 local Storage = require("core/storage")
+local Helpers = require("core.utils.helpers")
 
 local Control = {}
 
@@ -157,7 +158,44 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
     return
   end
   ---@diagnostic disable-next-line: undefined-field
-  TagEditorGUI.open(player, event.cursor_position)
+  if not event.cursor_position then
+    return -- Defensive: only proceed if cursor_position is present
+  end
+  -- Find the map tag for the clicked position and pass as context
+  local surface_index = player.physical_surface_index or player.surface.index
+  local storage = Storage.get()
+  local surfaces = storage.surfaces or {}
+  local map_tags = (surfaces[surface_index] and surfaces[surface_index].map_tags) or {}
+  
+  -- Find the chart tag under the cursor using a bounding box
+  local chart_tags = player.force.find_chart_tags(player.surface, {
+    left_top = {x = event.cursor_position.x - 1, y = event.cursor_position.y - 1},
+    right_bottom = {x = event.cursor_position.x + 1, y = event.cursor_position.y + 1}
+  })
+  local found_chart_tag = nil
+  local half_size = 0.6 -- adjust to match vanilla highlight
+  for _, tag in pairs(chart_tags) do
+    if event.cursor_position.x >= tag.position.x - half_size and event.cursor_position.x <= tag.position.x + half_size
+      and event.cursor_position.y >= tag.position.y - half_size and event.cursor_position.y <= tag.position.y + half_size then
+      found_chart_tag = tag
+      break
+    end
+  end
+  if not found_chart_tag then
+    return -- No tag under cursor, do nothing
+  end
+  -- Now look up the map_tag using Helpers.map_position_to_pos_string(found_chart_tag.position)
+  local pos_string = Helpers.map_position_to_pos_string(found_chart_tag.position)
+  local found_tag = nil
+  for _, tag in pairs(map_tags) do
+    if tag.pos_string == pos_string then
+      found_tag = tag
+      break
+    end
+  end
+  local context = found_tag and { tag_data = found_tag, is_edit = true } or { tag_data = { pos_string = pos_string }, is_edit = false }
+  TagEditorGUI.open(player, found_chart_tag.position, false, context)
+  return
 end)
 
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
@@ -226,11 +264,17 @@ script.on_event(defines.events.on_gui_text_changed, function(event)
   if not player then return end
   local frame = player.gui.screen.ft_tag_editor_outer_frame
   if not frame then return end
-  local save_btn = frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
-  local icon_picker = frame.ft_tag_editor_frame.ft_tag_editor_icon_row["tag-editor-icon"]
+  local save_btn = frame.ft_tag_editor_frame
+    and frame.ft_tag_editor_frame.ft_tag_editor_action_row
+    and frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
+  local icon_picker = frame.ft_tag_editor_frame
+    and frame.ft_tag_editor_frame.ft_tag_editor_icon_row
+    and frame.ft_tag_editor_frame.ft_tag_editor_icon_row["tag-editor-icon"]
   local text_val = event.element.text and event.element.text:match("%S")
   local icon_val = icon_picker and icon_picker.elem_value
-  save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
+  if save_btn then
+    save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
+  end
 end)
 
 script.on_event(defines.events.on_gui_elem_changed, function(event)

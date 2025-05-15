@@ -5,7 +5,7 @@ local PREFIX = Constants.PREFIX
 
 ---@diagnostic disable-next-line: undefined-global
 data:extend {
-    {
+  {
     type = "font",
     name = "custom-tiny-font",
     from = "default",
@@ -19,6 +19,16 @@ data:extend {
     priority = "extra-high",
     size = { 32, 49 },
     flags = { "gui-icon" },
+  },
+  {
+    type = "sprite",
+    name = "ft_move_tag_icon",
+    filename = "__core__/graphics/icons/mip/move-tag.png",
+    width = 32,
+    height = 32,
+    x = 0,
+    y = 0,
+    flags = {"icon"}
   },
   {
     type = "custom-input",
