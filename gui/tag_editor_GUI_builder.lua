@@ -18,22 +18,38 @@ end
 
 TagEditorGUI.add_row = add_row
 
-function TagEditorGUI.open(player, position, is_favorite, context)
-  is_favorite = is_favorite or false
-  TagEditorGUI.close(player) -- Ensure only one instance
+local TagEditorGUIBuilder = {}
 
-  local gui = player.gui.screen
+-- Builder object for tag editor GUI
+local TagEditorGUIBuilderClass = {}
+TagEditorGUIBuilderClass.__index = TagEditorGUIBuilderClass
 
-  -- Outer frame (vanilla style, with border)
-  local outer_frame = gui.add {
+function TagEditorGUIBuilderClass:new(player, position, is_favorite, context)
+  local o = {
+    player = player,
+    position = position,
+    is_favorite = is_favorite,
+    context = context,
+    gui = player.gui.screen,
+    outer_frame = nil,
+    content_frame = nil
+  }
+  setmetatable(o, self)
+  return o
+end
+
+function TagEditorGUIBuilderClass:build_outer_frame()
+  self.outer_frame = self.gui.add {
     type = "frame",
     name = "ft_tag_editor_outer_frame",
     direction = "vertical",
     style = "frame"
   }
+  return self
+end
 
-  -- Titlebar (vanilla style)
-  local titlebar_flow = outer_frame.add {
+function TagEditorGUIBuilderClass:build_titlebar()
+  local titlebar_flow = self.outer_frame.add {
     type = "flow",
     direction = "horizontal",
     name = "ft_tag_editor_titlebar_flow"
@@ -43,7 +59,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   titlebar_flow.style.top_padding = 2
   titlebar_flow.style.bottom_padding = 2
 
-  -- Title label
   local title_label = titlebar_flow.add {
     type = "label",
     caption = { "ft_tag_editor_title" },
@@ -51,21 +66,23 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   }
   title_label.style.left_margin = 4
   title_label.style.right_margin = 4
-  -- Draggable space
+
   local handle = titlebar_flow.add { type = "empty-widget", style = "draggable_space_header" }
   handle.style.horizontally_stretchable = true
   handle.style.height = 24
-  handle.drag_target = outer_frame
-  -- Close button
+  handle.drag_target = self.outer_frame
+
   local close_btn = titlebar_flow.add {
     type = "sprite-button",
     name = "ft_tag_editor_x_btn",
     sprite = "utility/close",
     style = "frame_action_button"
   }
+  return self
+end
 
-  -- Main content frame (vanilla inside frame)
-  local frame = outer_frame.add {
+function TagEditorGUIBuilderClass:build_content_frame()
+  local frame = self.outer_frame.add {
     type = "frame",
     name = "ft_tag_editor_frame",
     caption = "",
@@ -77,7 +94,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   frame.style.vertically_stretchable = true
   frame.style.padding = 0
 
-  -- Last user row (vanilla style, dark background, full width, no margins, correct border)
   local top_row_frame = frame.add {
     type = "frame",
     direction = "horizontal",
@@ -93,7 +109,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   top_row_frame.style.bottom_padding = 4
   top_row_frame.style.height = 40
 
-  -- Containing frame for last_user label/value
   local last_user_container = top_row_frame.add {
     type = "frame",
     direction = "horizontal",
@@ -106,7 +121,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   last_user_container.style.margin = 0
   last_user_container.style.padding = 0
 
-  -- Last user label (static localized text)
   local last_user_label = last_user_container.add {
     type = "label",
     caption = {"ft_tag_editor_last_user"},
@@ -119,10 +133,9 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   last_user_label.style.right_margin = 0
   last_user_label.style.vertical_align = "center"
 
-  -- Last user value label (dynamic value)
-  local last_user = (context and context.tag_data and context.tag_data.last_user)
+  local last_user = (self.context and self.context.tag_data and self.context.tag_data.last_user)
   if not last_user or last_user == "" then
-    last_user = player.name
+    last_user = self.player.name
   end
   local last_user_value_label = last_user_container.add {
     type = "label",
@@ -136,7 +149,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   last_user_value_label.style.vertical_align = "center"
   last_user_value_label.style.horizontal_align = "left"
 
-  -- Move button in a bordered_frame for proper layout
   local move_btn_container = top_row_frame.add {
     type = "frame",
     direction = "horizontal",
@@ -158,7 +170,7 @@ function TagEditorGUI.open(player, position, is_favorite, context)
     sprite = "ft_move_tag_icon",
     style = "slot_button",
     tooltip = { "ft_tag_editor_move_tooltip_enhanced" },
-    enabled = false -- will be enabled only for last_user and existing tag
+    enabled = false
   }
   move_btn.style.width = 24
   move_btn.style.height = 24
@@ -168,7 +180,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   move_btn.style.bottom_margin = 0
   move_btn.style.padding = 2
 
-  -- Delete button (vanilla: red trash icon)
   local delete_btn = top_row_frame.add {
     type = "sprite-button",
     name = "ft_tag_editor_delete_btn",
@@ -178,17 +189,15 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   }
   delete_btn.style.left_margin = 2
   delete_btn.style.right_margin = 0
-  -- Enable move button only for last_user if editing an existing tag (chart_tag exists)
-  local effective_last_user = (context and context.tag_data and context.tag_data.last_user)
+
+  local effective_last_user = (self.context and self.context.tag_data and self.context.tag_data.last_user)
   if not effective_last_user or effective_last_user == "" then
-    effective_last_user = player.name
+    effective_last_user = self.player.name
   end
-  if context and context.is_edit and effective_last_user == player.name and context.tag_data and context.tag_data.chart_tag then
+  if self.context and self.context.is_edit and effective_last_user == self.player.name and self.context.tag_data and self.context.tag_data.chart_tag then
     move_btn.enabled = true
   end
-  -- end of last user row
 
-  -- Content row
   local content_frame = frame.add {
     type = "frame",
     name = "ft_tag_editor_content_frame",
@@ -199,34 +208,31 @@ function TagEditorGUI.open(player, position, is_favorite, context)
   content_frame.style.horizontally_stretchable = true
   content_frame.style.vertically_stretchable = true
 
-  -- Teleport row (add top_margin to match vanilla spacing)
-  local pos_string = position and Helpers.map_position_to_pos_string(position) or "[no pos]"
+  local gps = self.position and Helpers.map_position_to_gps(self.position) or "[no pos]"
   add_row(content_frame, "ft_tag_editor_teleport_row", { "ft_tag_editor_teleport" },
     "te_tr_teleport_label", {
     type = "button",
     name = "ft_tag_editor_pos_btn",
-    caption = pos_string,
+    caption = gps,
     style = "ft_teleport_button"
   })
 
-  -- Favorite row
   local max_slots = Constants.MAX_FAVORITE_SLOTS
-  local available_slots = context and context.available_slots or max_slots
+  local available_slots = self.context and self.context.available_slots or max_slots
   local favorite_enabled = available_slots > 0
   add_row(content_frame, "ft_tag_editor_favorite_row", { "ft_tag_editor_favorite_label" },
     "te_tr_favorite_label", {
     type = "sprite-button",
     name = "ft_tag_editor_favorite_btn",
-    sprite = (is_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
+    sprite = (self.is_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
     tooltip = { "ft_tag_editor_favorite_tooltip" },
     style = "ft_favorite_button",
     enabled = favorite_enabled
   }, { top_margin = 8 })
   if not favorite_enabled then
-    is_favorite = false
+    self.is_favorite = false
   end
 
-  -- Icon picker row
   add_row(content_frame, "ft_tag_editor_icon_row", { "ft_tag_editor_icon" }, "te_tr_icon_label", {
     type = "choose-elem-button",
     name = "tag-editor-icon",
@@ -236,7 +242,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
     style = "ft_icon_picker_button"
   }, { top_margin = 8 })
 
-  -- Text row
   add_row(content_frame, "ft_tag_editor_text_row", { "ft_tag_editor_text" }, "te_tr_text_label", {
     type = "textfield",
     name = "ft_tag_editor_textbox",
@@ -246,7 +251,6 @@ function TagEditorGUI.open(player, position, is_favorite, context)
     style = "ft_textfield"
   }, { top_margin = 8 })
 
-  -- Description row
   add_row(content_frame, "ft_tag_editor_desc_row", { "ft_tag_editor_desc" }, "te_tr_desc_label", {
     type = "textfield",
     name = "ft_tag_editor_descbox",
@@ -258,17 +262,18 @@ function TagEditorGUI.open(player, position, is_favorite, context)
     style = "ft_descfield"
   }, { top_margin = 8 })
 
-  -- Move action row to outer_frame (below the main content frame)
-  local action_row = outer_frame.add { type = "flow", direction = "horizontal", name = "ft_tag_editor_action_row" }
-  --action_row.style.top_margin = 8
-  -- Add draggable handle instead of cancel button
+  return self
+end
+
+function TagEditorGUIBuilderClass:build_action_row()
+  local action_row = self.outer_frame.add { type = "flow", direction = "horizontal", name = "ft_tag_editor_action_row" }
   local drag_handle = action_row.add {
     type = "empty-widget",
     style = "draggable_space_header"
   }
   drag_handle.style.horizontally_stretchable = true
   drag_handle.style.height = 32
-  drag_handle.drag_target = outer_frame
+  drag_handle.drag_target = self.outer_frame
   local save_btn = action_row.add {
     type = "button",
     name = "ft_tag_editor_save_btn",
@@ -278,18 +283,31 @@ function TagEditorGUI.open(player, position, is_favorite, context)
     tooltip = { "ft_tag_editor_save_tooltip" }
   }
   save_btn.style.horizontal_align = "center"
-
-  player.opened = outer_frame
-  if outer_frame.force_auto_center then
-    outer_frame.force_auto_center()
-  end
+  return self
 end
 
-function TagEditorGUI.close(player)
+function TagEditorGUIBuilderClass:finalize()
+  self.player.opened = self.outer_frame
+  if self.outer_frame.force_auto_center then
+    self.outer_frame.force_auto_center()
+  end
+  return self.outer_frame
+end
+
+function TagEditorGUIBuilder.open(player, position, is_favorite, context)
+  local builder = TagEditorGUIBuilderClass:new(player, position, is_favorite, context)
+  builder:build_outer_frame()
+    :build_titlebar()
+    :build_content_frame()
+    :build_action_row()
+    :finalize()
+end
+
+function TagEditorGUIBuilder.close(player)
   local gui = player.gui.screen
   if gui.ft_tag_editor_outer_frame then
     gui.ft_tag_editor_outer_frame.destroy()
   end
 end
 
-return TagEditorGUI
+return TagEditorGUIBuilder

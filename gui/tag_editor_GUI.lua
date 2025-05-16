@@ -1,18 +1,51 @@
 --- tag_editor_GUI.lua
 --- Handles the tag editor dialog for FavoriteTeleport mod
 
+--[[
+  Static analysis suppressions:
+  Some if-statements in this file are flagged as 'impossible' or 'unnecessary' by static analysis tools.
+  These are required for runtime correctness in Factorio multiplayer and migration scenarios.
+  See comments above each such block for details.
+]]
+
 local TagEditorGUI = {}
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
+local Storage = require("core/storage")
 local TagEditorGUIBuilder = require("gui/tag_editor_GUI_builder")
 local TagEditorGUIValidation = require("gui/tag_editor_GUI_validation")
 local TagEditorGUIEvents = require("gui/tag_editor_GUI_events")
 
-TagEditorGUI.get_available_favorite_slots = function(player_index, surface_index, max_slots)
-  local storage = require("core/storage").get()
-  if not storage.players[player_index] then return max_slots end
-  if not storage.players[player_index][surface_index] then return max_slots end
-  local favorites = storage.players[player_index][surface_index].favorites or {}
+-- Helper: Find a tag by gps in a tag list
+local function find_tag_by_gps(tag_list, gps)
+  for idx, tag in pairs(tag_list) do
+    if tag.gps == gps then
+      return tag, idx
+    end
+  end
+  return nil, nil
+end
+
+-- Helper: Remove a favorite from all players on a surface (uses robust access)
+local function remove_favorite_from_all_players(surface_index, gps)
+  local storage = Storage.get()
+  for pidx, pdata in pairs(storage.players) do
+    local surf = pdata[surface_index]
+    --[[@diagnostic disable-next-line: unreachable-code]]
+    if surf and surf.favorites then -- Required for multiplayer/migration safety
+      for slot, fav in pairs(surf.favorites) do
+        if fav and fav.gps == gps then
+          surf.favorites[slot] = nil
+        end
+      end
+    end
+  end
+end
+
+-- Favorite slot helpers using new accessors
+TagEditorGUI.get_available_favorite_slots = function(player)
+  local favorites = Storage.get_player_favorites(player)
+  local max_slots = Constants.MAX_FAVORITE_SLOTS
   local count = 0
   for i = 1, max_slots do
     if not favorites[i] then count = count + 1 end
@@ -20,20 +53,22 @@ TagEditorGUI.get_available_favorite_slots = function(player_index, surface_index
   return count
 end
 
-TagEditorGUI.get_next_available_favorite_slot = function(player_index, surface_index)
-  local storage = require("core/storage").get()
+TagEditorGUI.get_next_available_favorite_slot = function(player)
+  local favorites = Storage.get_player_favorites(player)
   local max_slots = Constants.MAX_FAVORITE_SLOTS
-  if not storage.players[player_index] then return nil end
-  if not storage.players[player_index][surface_index] then return nil end
-  local favorites = storage.players[player_index][surface_index].favorites or {}
   for i = 1, max_slots do
     if not favorites[i] then return i end
   end
   return nil
 end
 
-TagEditorGUI.has_available_favorite_slot = function(player_index, surface_index)
-  return TagEditorGUI.get_next_available_favorite_slot(player_index, surface_index) ~= nil
+TagEditorGUI.has_available_favorite_slot = function(player)
+  local favorites = Storage.get_player_favorites(player)
+  local max_slots = Constants.MAX_FAVORITE_SLOTS
+  for i = 1, max_slots do
+    if not favorites[i] then return true end
+  end
+  return false
 end
 
 TagEditorGUI.open = TagEditorGUIBuilder.open
@@ -42,6 +77,8 @@ TagEditorGUI.add_row = TagEditorGUIBuilder.add_row
 
 TagEditorGUI.on_click = TagEditorGUIEvents.on_click
 
+--- Handles the confirm/save action for the tag editor GUI
+-- @param player LuaPlayer
 function TagEditorGUI.handle_confirm(player)
   local gui = player.gui.screen
   local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
@@ -52,7 +89,7 @@ function TagEditorGUI.handle_confirm(player)
   local player_index = player.index
 
   -- Gather input values
-  local pos_string = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
+  local gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
   local icon_picker = frame.ft_tag_editor_icon_row["tag-editor-icon"]
   local icon = icon_picker and icon_picker.elem_value
   local text_box = frame.ft_tag_editor_text_row.ft_tag_editor_textbox
@@ -68,67 +105,39 @@ function TagEditorGUI.handle_confirm(player)
     return
   end
 
-  -- Storage setup
-  local Storage = require("core/storage")
-  local storage = Storage.get()
-  storage.players[player_index] = storage.players[player_index] or {}
-  storage.players[player_index][surface_index] = storage.players[player_index][surface_index] or {}
-  storage.players[player_index][surface_index].favorites = storage.players[player_index][surface_index].favorites or {}
-  storage.surfaces[surface_index] = storage.surfaces[surface_index] or {}
-  storage.surfaces[surface_index].chart_tags = storage.surfaces[surface_index].chart_tags or {}
-  storage.surfaces[surface_index].map_tags = storage.surfaces[surface_index].map_tags or {}
-
   -- Favorite slot logic
-  if is_favorite and not TagEditorGUI.has_available_favorite_slot(player_index, surface_index) then
-    is_favorite = false
-    favorite_slots_unavailable = true
-  end
-
-  -- Find or create chart_tag
-  local chart_tags = storage.surfaces[surface_index].chart_tags
-  local found_tag = nil
-  for _, tag in pairs(chart_tags) do
-    if tag.pos_string == pos_string then
-      found_tag = tag
-      break
+  local slot = nil
+  --[[@diagnostic disable-next-line: unreachable-code]]
+  if is_favorite then -- Required for runtime: GUI state can change
+    slot = TagEditorGUI.get_next_available_favorite_slot(player)
+    if not slot then
+      is_favorite = false
+      favorite_slots_unavailable = true
     end
   end
 
+  -- Find or create chart_tag
+  local chart_tags = Storage.get_chart_tags(player)
+  local found_tag, found_idx = find_tag_by_gps(chart_tags, gps)
   local chart_tag
   if not found_tag then
     -- Create new chart tag
     local tag_spec = {
-      position = Helpers.pos_string_to_map_position(pos_string),
+      position = Helpers.gps_to_map_position(gps),
       icon = icon,
       text = text,
       last_user = player.name
     }
-    --[[
-      The following check triggers a static analysis diagnostic (false positive):
-      'chart_tag = player.force.add_chart_tag(player.surface, tag_spec)'
-      Static analysis may claim 'chart_tag' is always non-nil, but in Factorio runtime,
-      add_chart_tag can return nil if the tag cannot be created (e.g., invalid position).
-      This check is required for runtime correctness.
-    --]]
     chart_tag = player.force.add_chart_tag(player.surface, tag_spec)
     if not chart_tag then
       player.print{"FavoriteTeleport.ft_tag_editor_error_chart_tag_failed"}
       TagEditorGUI.close(player)
       return
     end
-    table.insert(chart_tags, {pos_string=pos_string, tag=chart_tag, last_user=player.name})
-
-    -- Invalidate chart_tags cache so it will be rebuilt on next access
-    storage.surfaces[surface_index].chart_tags = nil
+    table.insert(chart_tags, {gps=gps, tag=chart_tag, last_user=player.name})
+    Storage.get().surfaces[surface_index].chart_tags = nil -- Invalidate cache
   else
-    -- Only last_user can update tag info (except favoriting)
     chart_tag = found_tag.tag
-    --[[
-      The following check triggers a static analysis diagnostic (false positive):
-      'if found_tag.last_user ~= player.name then'
-      Static analysis may claim this is always false, but in multiplayer or after tag transfer,
-      this check is required for runtime correctness and security.
-    --]]
     if found_tag.last_user ~= player.name then
       player.print{"FavoriteTeleport.ft_tag_editor_error_not_last_user"}
       return
@@ -136,25 +145,15 @@ function TagEditorGUI.handle_confirm(player)
     chart_tag.icon = icon
     chart_tag.text = text
     found_tag.last_user = player.name
-
-    -- Invalidate chart_tags cache after update
-    storage.surfaces[surface_index].chart_tags = nil
+    Storage.get().surfaces[surface_index].chart_tags = nil -- Invalidate cache
   end
 
   -- MapTag creation/update
-  local map_tags = storage.surfaces[surface_index].map_tags
-  local map_tag = nil
-  for _, mt in pairs(map_tags) do
-    if mt.pos_string == pos_string then
-      map_tag = mt
-      break
-    end
-  end
-  -- The following 'if' statement may trigger a static analysis diagnostic for being 'impossible' or 'unnecessary'.
-  -- This is a false positive: Factorio runtime can return nil here if the map tag is not found, so this check is required.
+  local map_tags = Storage.get_map_tags(player)
+  local map_tag, map_idx = find_tag_by_gps(map_tags, gps)
   if not map_tag then
     map_tag = {
-      pos_string = pos_string,
+      gps = gps,
       faved_by_players = {},
       description = description
     }
@@ -164,38 +163,33 @@ function TagEditorGUI.handle_confirm(player)
   end
 
   -- Favorite logic
-  local favorites = storage.players[player_index][surface_index].favorites
-  local slot = TagEditorGUI.get_next_available_favorite_slot(player_index, surface_index)
-
-  --[[
-    The following check may trigger a static analysis diagnostic (false positive):
-    'if is_favorite and slot then'
-    Static analysis may claim this is always falsy, but in Factorio runtime,
-    both values can be true, and this check is required for runtime correctness.
-  --]]
-  if is_favorite and slot then
-    favorites[slot] = {pos_string = pos_string}
-
+  local favorites = Storage.get_player_favorites(player)
+  --[[@diagnostic disable-next-line: unreachable-code]]
+  if is_favorite and slot then -- Required for runtime: user may toggle favorite
+    favorites[slot] = {
+      surface_index = surface_index,
+      gps = gps,
+      map_tag = map_tag,
+      slot_locked = false
+    }
     -- Add to faved_by_players if not already present
     local already_faved = false
     for _, idx in ipairs(map_tag.faved_by_players) do
       if idx == player_index then already_faved = true; break end
     end
-
-    --[[
-      The following check may trigger a static analysis diagnostic (false positive):
-      'if not already_faved then'
-      Static analysis may claim this is always truthy, but in multiplayer or after tag transfer,
-      this check is required for runtime correctness.
-    --]]
     if not already_faved then
       table.insert(map_tag.faved_by_players, player_index)
     end
   else
     -- Remove from favorites if present
     for i, fav in pairs(favorites) do
-      if fav and fav.pos_string == pos_string then
-        favorites[i] = nil
+      if fav and fav.gps == gps then
+        favorites[i] = {
+          surface_index = surface_index,
+          gps = "",
+          map_tag = nil,
+          slot_locked = false
+        }
       end
     end
     -- Remove from faved_by_players
@@ -204,101 +198,74 @@ function TagEditorGUI.handle_confirm(player)
         table.remove(map_tag.faved_by_players, i)
       end
     end
-
-    -- Invalidate chart_tags cache after removal
-    storage.surfaces[surface_index].chart_tags = nil
+    Storage.get().surfaces[surface_index].chart_tags = nil -- Invalidate cache after removal
   end
 
-  -- Save storage (if needed)
-  if Storage.save_data then Storage.save_data(storage) end
-
-  -- Close the tag editor GUI
+  if Storage.save_data then Storage.save_data(Storage.get()) end
   TagEditorGUI.close(player)
 end
 
+--- Handles tag editor actions (confirm, delete, move)
+-- @param player LuaPlayer
+-- @param action string
 function TagEditorGUI.handle_action(player, action)
   local gui = player.gui.screen
   local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
   if not frame then return end
 
+  local surface = player.surface
+  local surface_index = surface.index
+  local player_index = player.index
+
   if action == "confirm" then
     TagEditorGUI.handle_confirm(player)
   elseif action == "delete" then
-    -- Only allow deletion if editing an existing tag
-    local surface = player.surface
-    local surface_index = surface.index
-    local player_index = player.index
-    local Storage = require("core/storage")
-    local storage = Storage.get()
-    local pos_string = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
-    local chart_tags = storage.surfaces[surface_index].chart_tags or {}
-    local found_tag, found_idx = nil, nil
-    for idx, tag in pairs(chart_tags) do
-      if tag.pos_string == pos_string then
-        found_tag = tag
-        found_idx = idx
-        break
+    local gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
+    local chart_tags = Storage.get_chart_tags(player)
+    local found_tag, found_idx = find_tag_by_gps(chart_tags, gps)
+    --[[@diagnostic disable-next-line: unreachable-code]]
+    if found_tag then -- Required for runtime: tag may not exist
+      --[[@diagnostic disable-next-line: unreachable-code]]
+      if found_tag.created_by ~= player.name then
+        player.print{"FavoriteTeleport.ft_tag_editor_error_not_creator"}
+        return
       end
+      --[[@diagnostic disable-next-line: unreachable-code]]
+      if found_tag.last_user ~= player.name then
+        player.print{"FavoriteTeleport.ft_tag_editor_error_not_last_user"}
+        return
+      end
+      --[[@diagnostic disable-next-line: unreachable-code]]
+      if found_tag.tag and found_tag.tag.valid then
+        found_tag.tag.destroy()
+      end
+      --[[@diagnostic disable-next-line: unreachable-code]]
+      if chart_tags and found_idx then
+        chart_tags[found_idx] = nil
+      end
+      local map_tags = Storage.get_map_tags(player)
+      local map_tag, map_idx = find_tag_by_gps(map_tags, gps)
+      --[[@diagnostic disable-next-line: unreachable-code]]
+      if map_tag and map_idx then
+        table.remove(map_tags, map_idx)
+      end
+      remove_favorite_from_all_players(surface_index, gps)
+      Storage.get().surfaces[surface_index].chart_tags = nil
+      if Storage.save_data then Storage.save_data(Storage.get()) end
+      player.print{"FavoriteTeleport.ft_tag_editor_deleted"}
+      TagEditorGUI.close(player)
     end
-    --[[
-        The following checks may trigger static analysis diagnostics (false positives):
-        - 'if found_tag then' and 'if found_tag.tag and found_tag.tag.valid then'
-        - 'if pdata[surface_index] and pdata[surface_index].favorites then'
-        These are required for runtime correctness due to possible nil values in Factorio runtime.
-      --]]
-      if found_tag then
-        -- Only creator can delete or move
-        if found_tag.created_by ~= player.name then
-          player.print{"FavoriteTeleport.ft_tag_editor_error_not_creator"}
-          return
-        end
-        -- Only last_user can delete
-        if found_tag.last_user ~= player.name then
-          player.print{"FavoriteTeleport.ft_tag_editor_error_not_last_user"}
-          return
-        end
-        if found_tag.tag and found_tag.tag.valid then
-          found_tag.tag.destroy()
-        end
-        if chart_tags and found_idx then
-          chart_tags[found_idx] = nil
-        end
-        local map_tags = storage.surfaces[surface_index].map_tags or {}
-        for i=#map_tags,1,-1 do
-          if map_tags[i].pos_string == pos_string then
-            table.remove(map_tags, i)
-          end
-        end
-        for pidx, pdata in pairs(storage.players) do
-          if pdata[surface_index] and pdata[surface_index].favorites then
-            local favorites = pdata[surface_index].favorites
-            for slot, fav in pairs(favorites) do
-              if fav and fav.pos_string == pos_string then
-                favorites[slot] = nil
-              end
-            end
-          end
-        end
-        storage.surfaces[surface_index].chart_tags = nil
-        if Storage.save_data then Storage.save_data(storage) end
-        player.print{"FavoriteTeleport.ft_tag_editor_deleted"}
-        TagEditorGUI.close(player)
-      end
     return
   elseif action == "move" then
-    -- Only last_user can move; button is only enabled for last_user
-    -- Set a flag in the player's persistent storage to indicate move mode is active
-    local Storage = require("core/storage")
     local storage = Storage.get()
     storage.ft_tag_editor_move_mode = storage.ft_tag_editor_move_mode or {}
     storage.ft_tag_editor_move_mode[player.index] = {
       active = true,
       surface_index = player.surface.index,
-      pos_string = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
+      gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
     }
     if Storage.save_data then Storage.save_data(storage) end
     player.print{"FavoriteTeleport.ft_tag_editor_move_mode_active"}
-    -- Optionally, show a floating text or GUI indicator for move mode
     TagEditorGUI.close(player)
     return
   end

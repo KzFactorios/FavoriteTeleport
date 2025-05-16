@@ -4,6 +4,15 @@
 --- @class Context
 --- @field get_player_data fun(player_index: uint): table
 --- Handles persistent mod data and schema management for FavoriteTeleport
+--
+-- This module acts as an abstraction layer over the core persistent storage (see core/storage.lua).
+-- While currently a thin wrapper, it is intended for future-proofing:
+--   - Centralizing schema migrations and version upgrades
+--   - Supporting multi-mod or cross-mod data integration
+--   - Adding validation, access control, or data transformation logic
+--   - Decoupling the rest of the mod from direct storage implementation details
+--
+-- All persistent data access should go through Context, not Storage, to allow for future extensibility.
 local Context = {}
 
 local Storage = require("core/storage")

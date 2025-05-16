@@ -114,4 +114,10 @@ data:extend {
     consuming = "none",
     order = "zz"
   },
+  {
+    type = "custom-input",
+    name = "ft-dev-dump-chart-tags",
+    key_sequence = "CONTROL + F9",
+    consuming = "none"
+  }
 }

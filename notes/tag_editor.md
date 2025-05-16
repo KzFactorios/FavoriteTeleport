@@ -10,14 +10,14 @@ when the confirm button is clicked, the input data should be validated.
 
 if it is_favorite then check for available player favorite slots, if there aren't any, change is_favorite to false and continue. There should be another local value to track if this situation arises to trigger a post creation dialog popup indicating that the player slots were full and that they will have to make room for any new favorites. Let's call this value favorite_slots_unavailable
 
-Then we will search the storage.surfaces[player.physical_surface_index].chart_tags collection to find a match to the position (in teleport button text). this will require matching a map_position to a pos_string
+Then we will search the storage.surfaces[player.surface.index].chart_tags collection to find a match to the position (in teleport button text). this will require matching a map_position to a pos_string
 
 if no match is found, this signals that we are creating a new tag.
 
 using the inputs and the player, a new chart_tag should be created thusly:
 -- Example: Add a custom chart tag at a specific position
 game.forces["player"].add_chart_tag(surface, {
-  position = (position from tag_editor xxx.yyy),
+  position = (position from tag_editor {x: x, y:y}),
   icon = {type="item", name="iron-plate"},
   text = input text,
   last_user = player.name
@@ -25,7 +25,7 @@ game.forces["player"].add_chart_tag(surface, {
 
 if the creation of that chart tag fails while creating a new one, an error message should be logged and shown to the player.
 
-if successful, the chart_tag should be added to storage.surfaces[player.physical_surface_index].chart_tags
+if successful, the chart_tag should be added to storage.surfaces[player.surface.index].chart_tags
 
 if the creation is successful, then we should create a map_tag like so:
 example:
@@ -34,19 +34,20 @@ map_tag = {
     faved_by_players = {} -- this will add the player_index to the list if it is favorited in the gui
 }
 
-also if the entry is_favorite = true, then a favorite should be created in the player's next available open/unused slot. A player cannot have more than the constants.MAX_FAVORITE_SLOTS = 10 (create this constant in constants.lua). The player's favorites should reside in storage.players[player_index][physical_surface_index].favorites[slot_index]
+also if the entry is_favorite = true, then a favorite should be created in the player's next available open/unused slot. A player cannot have more than the constants.MAX_FAVORITE_SLOTS = 10 (create this constant in constants.lua). The player's favorites should reside in storage.players[player_index].favorites
 
-if is_favorite == true, then a favorite will be created in the next available slot in the player's storage.players[player_index][physical_surface_index].favorites list
+if is_favorite == true, then a favorite will be created in the next available slot in the player's storage.players[player_index].favorites list
 
-finally the map_tag should be added to storage.surfaces[player.physical_surface_index].map_tags, the dialog data should be cleared and the gui closed.
+finally the map_tag should be added to storage.surfaces[player.surface.index].map_tags, the dialog data should be cleared and the gui closed.
 
 if favorite_slots_unavailable == true, this is the point where we show a popup modal dialog box to inform the player that they will have to delete a favorite to make room for any new favorites.
 
 ## Clarifications and Implementation Notes (as of 2025-05-14)
 
 ### 1. Map Tag Structure and pos_string
-- The field for the string version of the position should always be named `pos_string`.
-- The terms `position`, `mapposition`, and `map_position` may be used interchangeably for the table form, but `pos_string` always refers to the string version.
+- The field for the string version of the position should always be named `gps`.
+- The terms `position`, `mapposition`, and `map_position` may be used interchangeably for the table form, but `gps` always refers to the string version.
+- gps is a string the format s.xxx.yyy where s is the surface_index, xxx is the x coordinate and yyy is the y coordinate.  xxx and yyy are a minimum of 3 digits 
 - The `faved_by_players` list must only contain unique player indices (no duplicates).
 
 ### 2. Favorite Slot Management
@@ -55,7 +56,7 @@ if favorite_slots_unavailable == true, this is the point where we show a popup m
 - A helper function should be created to check for available favorite slots for a player on a given surface.
 
 ### 3. Storage Structure
-- Always check for and initialize storage tables before inserting (e.g., `storage.players[player_index][surface_index]`).
+- Always check for and initialize storage tables before inserting (e.g., `storage.players[player_index]`).
 - The `favorites` list should be a sparse array: nil values indicate empty slots.
 - A helper function should be created to check for available favorite slots.
 

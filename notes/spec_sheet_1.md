@@ -138,7 +138,7 @@ a players' favorites are scoped to the current player's surface only
 - **Debug Logging:** Conditional debug logging using `context.__DEBUG__`.
 - Always use best-practices
 - try to keep files sizes as small as possible even if it means creating other files for better organization and readability
-- remove any references to qmtt or qmt. It will be preferred to prepend "ftt_" to variables or functions ONLY IF NECESSARY
+- remove any references to qmtt or qmt. It will be preferred to prepend "ft_" to variables or functions ONLY IF NECESSARY
 
 - Annotate code using the LuaCATS/EmmyLua-style comments
 - ensure Lua Language Server extension from the VS Code is installed

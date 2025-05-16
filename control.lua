@@ -3,7 +3,7 @@
 -- Main entry point for event registration and mod lifecycle
 
 local Context = require("core/context")
-local MapTag = require("core/maptag")
+local MapTag = require("core/map_tag")
 local ErrorHandler = require("core/utils/error_handler")
 local Constants = require("constants")
 local FaveBarGUI = require("gui/fave_bar_GUI")
@@ -14,6 +14,24 @@ local Helpers = require("core.utils.helpers")
 local Control = {}
 
 local RESPONSIVE_TICKS = 30 * 1
+
+-- Utility: Show player position in top left corner in map view (dev-only, ultra-lean)
+local CURSOR_LABEL_NAME = "ft_cursor_position_label"
+local function update_cursor_position_label(player)
+  if not player or not player.valid then return end
+  local pos = player.position or { x = 0, y = 0 }
+  local label = player.gui.screen[CURSOR_LABEL_NAME]
+  local text = string.format("%.1f, %.1f", pos.x or 0, pos.y or 0)
+  if not label then
+    label = player.gui.screen.add {
+      type = "label",
+      name = CURSOR_LABEL_NAME,
+      caption = text
+    }
+  else
+    label.caption = text
+  end
+end
 
 -- Main mod event registration and lifecycle management
 
@@ -42,7 +60,7 @@ script.on_configuration_changed(function(event)
         -- GuiBase.update_the_fav_bar(player) -- or .on_player_removed if needed (function not present in GuiBase)
       end
       -- Mod is being removed, clean up data
-      context.qmtt = nil
+      context.map_tags = nil
     else
       for _, player in pairs(game.players) do
         control.initialize(player)
@@ -110,46 +128,29 @@ end)
 --[[TODO decide if this is necessary to handle stock editor and/or should
       handle mod's additions for consistency
 script.on_event(defines.events.on_chart_tag_added, function(event)
-  qmtt.handle_chart_tag_added(event)
+  .handle_chart_tag_added(event)
 end)]]
 
 script.on_event(defines.events.on_chart_tag_modified, function(event)
-  qmtt.handle_chart_tag_modified(event)
+  -- TODO implement
 end)
 
 script.on_event(defines.events.on_chart_tag_removed, function(event)
-  --qmtt.handle_chart_tag_removal(event)
+  --.handle_chart_tag_removal(event)
 end)
 
 -- set events for hotkeys
 for i = 1, 10 do
   script.on_event(Constants.events.TELEPORT_TO_FAVORITE .. i, function(event)
-    ---@diagnostic disable-next-line: undefined-field
     local player = game.get_player(event.player_index)
     if not player then return end
-
-    --[[local faves = context.get_player_favorites_on_current_surface(player)
-    if not faves then return end
-
-    local sel_fave = faves[i]
-    if sel_fave and sel_fave._pos_idx and sel_fave._pos_idx ~= "" then
-      -- Teleporting on a space platform is handled at teleport function
-      map_tag_utils.teleport_player_to_closest_position(player,
-        wutils.decode_position_from_pos_idx(sel_fave._pos_idx))
-    end]]
+    -- Hotkey teleport logic to be implemented
   end)
 end
 
 -- Register a custom input for right-click in chart view to open the tag editor
 script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
-  -- Defensive: iterate event table to find player_index
-  local player_index = nil
-  for k, v in pairs(event) do
-    if tostring(k) == "player_index" then
-      player_index = v
-      break
-    end
-  end
+  local player_index = Helpers.find_player_index_in_event(event)
   if not player_index then return end
   local player = game.get_player(player_index)
   if not player then return end
@@ -157,50 +158,90 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
     return
   end
+  -- Use event.cursor_position if available, otherwise fallback to player.position
   ---@diagnostic disable-next-line: undefined-field
-  if not event.cursor_position then
-    return -- Defensive: only proceed if cursor_position is present
+  local pos = (event.cursor_position and type(event.cursor_position) == "table") and event.cursor_position or
+  (player.position or { x = 0, y = 0 })
+  local gps = Helpers.map_position_to_gps(pos)
+  local chart_tags = Storage.get_chart_tags(player)
+  local chart_tag = nil
+
+  -- if there is a matching chart_tag with matching gps
+  for _, tag in pairs(chart_tags) do
+    if gps == Helpers.map_position_to_gps(tag.position) then
+      chart_tag = tag
+      break
+    end
   end
-  -- Find the map tag for the clicked position and pass as context
-  local surface_index = player.physical_surface_index or player.surface.index
+
+  local map_tags = Storage.get_map_tags(player)
+  local map_tag = nil
+  for _, tag in pairs(map_tags) do
+    if gps == tag.gps then
+      map_tag = tag
+      break
+    end
+  end
+
+  -- this logic will build a matching map_tag upon tag_editor save
+  if chart_tag ~= nil and (map_tag ~= nil or map_tag ~= {}) then
+    -- build tag_editor with chart_tag and map_tag
+    TagEditorGUI.open(player, found_chart_tag.position, false, context)
+  elseif chart_tag ~= nil and not map_tag then
+    -- build tag_editor with chart_tag only
+  elseif not chart_tag and not map_tag then
+    -- build tag with the current event position
+    -- gps
+  elseif not chart_tag and map_tag ~= nil and map_tag ~= {} then
+    -- create a matching chart_tag with text == gps
+    -- open the tag editor with data from map_tag and matching chart_tag
+  end
+
+
+
+
+
+  
+
+
+  local surface_index = player.surface.index
   local storage = Storage.get()
   local surfaces = storage.surfaces or {}
   local map_tags = (surfaces[surface_index] and surfaces[surface_index].map_tags) or {}
-  
-  -- Find the chart tag under the cursor using a bounding box
-  local chart_tags = player.force.find_chart_tags(player.surface, {
-    left_top = {x = event.cursor_position.x - 1, y = event.cursor_position.y - 1},
-    right_bottom = {x = event.cursor_position.x + 1, y = event.cursor_position.y + 1}
-  })
+  -- Find the chart tag under the cursor using a larger bounding box (using pos)
   local found_chart_tag = nil
-  local half_size = 0.6 -- adjust to match vanilla highlight
+  local half_size = 1.2
   for _, tag in pairs(chart_tags) do
-    if event.cursor_position.x >= tag.position.x - half_size and event.cursor_position.x <= tag.position.x + half_size
-      and event.cursor_position.y >= tag.position.y - half_size and event.cursor_position.y <= tag.position.y + half_size then
+    if pos.x >= tag.position.x - half_size and pos.x <= tag.position.x + half_size
+        and pos.y >= tag.position.y - half_size and pos.y <= tag.position.y + half_size then
       found_chart_tag = tag
       break
     end
   end
-  if not found_chart_tag then
-    return -- No tag under cursor, do nothing
-  end
-  -- Now look up the map_tag using Helpers.map_position_to_pos_string(found_chart_tag.position)
-  local pos_string = Helpers.map_position_to_pos_string(found_chart_tag.position)
-  local found_tag = nil
-  for _, tag in pairs(map_tags) do
-    if tag.pos_string == pos_string then
-      found_tag = tag
-      break
+  local found_tag
+  local context
+  if found_chart_tag then
+    gps = Helpers.map_position_to_gps(found_chart_tag.position)
+    for _, tag in pairs(map_tags) do
+      if tag.gps == gps then
+        found_tag = tag
+        break
+      end
     end
+    context = found_tag and { tag_data = found_tag, is_edit = true } or
+    { tag_data = { gps = gps }, is_edit = false }
+    TagEditorGUI.open(player, found_chart_tag.position, false, context)
+  else
+    -- No chart tag found: open tag editor for creation at this position
+    context = { tag_data = { gps = gps }, is_edit = false }
+    TagEditorGUI.open(player, pos, false, context)
   end
-  local context = found_tag and { tag_data = found_tag, is_edit = true } or { tag_data = { pos_string = pos_string }, is_edit = false }
-  TagEditorGUI.open(player, found_chart_tag.position, false, context)
-  return
 end)
 
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
-  ---@diagnostic disable-next-line: undefined-field
-  local player = game.get_player(event.player_index)
+  local player_index = Helpers.find_player_index_in_event(event)
+  if not player_index then return end
+  local player = game.get_player(player_index)
   if not player then return end
   local storage = remote.call("FavoriteTeleport", "get_storage")
   if type(storage) ~= "table" then
@@ -251,7 +292,7 @@ script.on_event(defines.events.on_gui_click, function(event)
     end
     return
   end
-  
+
   -- Handle FaveBarGUI button clicks (if needed)
   -- Add more GUI event handling here as you expand the GUIs
 end)
@@ -265,15 +306,11 @@ script.on_event(defines.events.on_gui_text_changed, function(event)
   local frame = player.gui.screen.ft_tag_editor_outer_frame
   if not frame then return end
   local save_btn = frame.ft_tag_editor_frame
-    and frame.ft_tag_editor_frame.ft_tag_editor_action_row
-    and frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
-  local icon_picker = frame.ft_tag_editor_frame
-    and frame.ft_tag_editor_frame.ft_tag_editor_icon_row
-    and frame.ft_tag_editor_frame.ft_tag_editor_icon_row["tag-editor-icon"]
-  local text_val = event.element.text and event.element.text:match("%S")
-  local icon_val = icon_picker and icon_picker.elem_value
+      and frame.ft_tag_editor_frame.ft_tag_editor_action_row
+      and frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
   if save_btn then
-    save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
+    -- Enable as soon as any text is present (including whitespace)
+    save_btn.enabled = (#event.element.text > 0)
   end
 end)
 
@@ -368,6 +405,38 @@ end
 script.on_nth_tick(RESPONSIVE_TICKS, function(event)
   for _, player in pairs(game.connected_players) do
     check_and_handle_render_mode_change(player)
+  end
+end)
+
+script.on_nth_tick(5, function(event)
+  for _, player in pairs(game.connected_players) do
+    update_cursor_position_label(player)
+  end
+end)
+
+-- DEV: Dump chart tags for current surface with CTRL+F9
+script.on_event("ft-dev-dump-chart-tags", function(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  local surface = player.surface
+  local chart_tags = player.force.find_chart_tags(surface)
+  if not chart_tags or #chart_tags == 0 then
+    player.print("[DEV] No chart tags found on this surface.")
+    return
+  end
+  for i, tag in ipairs(chart_tags) do
+    local msg = {
+      string.format("[DEV] Tag #%d:", i),
+      "  position: " .. serpent.line(tag.position, { comment = false }),
+      "  text: " .. tostring(tag.text),
+      "  icon: " .. (tag.icon and tag.icon.type or "nil"),
+      "  last_user: " .. tostring(tag.last_user),
+      "  tag_number: " .. tostring(tag.tag_number),
+      "  surface: " .. tostring(tag.surface and tag.surface.name or "nil"),
+      "  force: " .. tostring(tag.force and tag.force.name or "nil"),
+      "  valid: " .. tostring(tag.valid)
+    }
+    player.print(table.concat(msg, "\n"))
   end
 end)
 
