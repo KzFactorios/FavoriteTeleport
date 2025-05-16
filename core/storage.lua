@@ -172,7 +172,7 @@ end
 --- Called when a player leaves the game; cleans up their tag ownership and favorites
 -- @param player_index integer
 -- @param player_name string
-function Storage.on_player_left(player_index, player_name)
+function Storage.on_player_left_game(player_index, player_name)
   local storage = Storage.get()
   -- Remove player_index from all faved_by_players and set last_user to nil if owned
   for surface_index, surface_data in pairs(storage.surfaces) do
@@ -206,6 +206,15 @@ function Storage.on_player_left(player_index, player_name)
         end
       end
     end
+  end
+end
+
+--- Invalidates the chart tag cache for a given surface index by setting chart_tags to nil.
+-- @param surface_index integer
+function Storage.reset_cached_chart_tags(surface_index)
+  local storage = Storage.get()
+  if storage.surfaces and storage.surfaces[surface_index] then
+    storage.surfaces[surface_index].chart_tags = nil
   end
 end
 

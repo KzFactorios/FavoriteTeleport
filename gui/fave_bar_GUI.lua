@@ -8,6 +8,8 @@ local Context = require("core/context")
 local Favorite = require("core/favorite")
 local MapTag = require("core/map_tag")
 local ErrorHandler = require("core/utils/error_handler")
+local Storage = require("core.storage")
+local Helpers = require("core.utils.helpers")
 
 --- Creates or updates the favorites bar for a player
 -- @param player LuaPlayer
@@ -58,10 +60,8 @@ end
 --- Updates the favorites bar slots for the current surface
 -- @param player LuaPlayer
 function FaveBarGUI.update_slots(player)
-  local Storage = require("core/storage")
-  local Helpers = require("core.utils.helpers")
   local favorites = Storage.get_player_favorites(player)
-  local slots = Helpers.get_surface_favorites_array(favorites, Constants.MAX_FAVORITE_SLOTS, "FaveBarGUI.update_slots for player " .. player.name)
+  local slots = Helpers.get_surface_favorites_array(favorites, Constants.MAX_FAVORITE_SLOTS)
   for slot, fav in ipairs(slots) do
     -- Use fav.surface_index, fav.gps, fav.map_tag, fav.slot_locked
     -- Example: display slot as empty if Helpers.favorite_slot_is_empty(fav)

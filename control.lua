@@ -4,11 +4,10 @@
 
 local Context = require("core/context")
 local MapTag = require("core/map_tag")
-local ErrorHandler = require("core/utils/error_handler")
 local Constants = require("constants")
 local FaveBarGUI = require("gui/fave_bar_GUI")
 local TagEditorGUI = require("gui/tag_editor_GUI")
-local Storage = require("core/storage")
+local Storage = require("core.storage")
 local Helpers = require("core.utils.helpers")
 
 local Control = {}
@@ -142,7 +141,9 @@ end)
 -- set events for hotkeys
 for i = 1, 10 do
   script.on_event(Constants.events.TELEPORT_TO_FAVORITE .. i, function(event)
-    local player = game.get_player(event.player_index)
+    local player_index = Helpers.find_player_index_in_event(event)
+    if not player_index then return end
+    local player = game.get_player(player_index)
     if not player then return end
     -- Hotkey teleport logic to be implemented
   end)
@@ -154,6 +155,7 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   if not player_index then return end
   local player = game.get_player(player_index)
   if not player then return end
+
   -- Ignore right-clicks in render_mode.game or render_mode.chart_zoomed_in
   if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
     return
@@ -161,14 +163,15 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   -- Use event.cursor_position if available, otherwise fallback to player.position
   ---@diagnostic disable-next-line: undefined-field
   local pos = (event.cursor_position and type(event.cursor_position) == "table") and event.cursor_position or
-  (player.position or { x = 0, y = 0 })
-  local gps = Helpers.map_position_to_gps(pos)
+      (player.position or { x = 0, y = 0 })
+  local gps = Helpers.map_position_to_gps(player.surface.index, pos)
+
   local chart_tags = Storage.get_chart_tags(player)
   local chart_tag = nil
 
   -- if there is a matching chart_tag with matching gps
   for _, tag in pairs(chart_tags) do
-    if gps == Helpers.map_position_to_gps(tag.position) then
+    if gps == Helpers.map_position_to_gps(player.surface.index, tag.position) then
       chart_tag = tag
       break
     end
@@ -186,14 +189,16 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   -- this logic will build a matching map_tag upon tag_editor save
   if chart_tag ~= nil and (map_tag ~= nil or map_tag ~= {}) then
     -- build tag_editor with chart_tag and map_tag
-    TagEditorGUI.open(player, found_chart_tag.position, false, context)
+    TagEditorGUI.open(player, chart_tag.position, false, context)
   elseif chart_tag ~= nil and not map_tag then
     -- build tag_editor with chart_tag only
+    TagEditorGUI.open(player, chart_tag.position, false, context)
   elseif not chart_tag and not map_tag then
     -- build tag with the current event position
-    -- gps
+    TagEditorGUI.open(player, pos, false, context)
   elseif not chart_tag and map_tag ~= nil and map_tag ~= {} then
     -- create a matching chart_tag with text == gps
+    MapTag.create_chart_tag_from_map_tag(player, map_tag)
     -- open the tag editor with data from map_tag and matching chart_tag
   end
 
@@ -201,7 +206,7 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
 
 
 
-  
+
 
 
   local surface_index = player.surface.index
@@ -229,7 +234,7 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
       end
     end
     context = found_tag and { tag_data = found_tag, is_edit = true } or
-    { tag_data = { gps = gps }, is_edit = false }
+        { tag_data = { gps = gps }, is_edit = false }
     TagEditorGUI.open(player, found_chart_tag.position, false, context)
   else
     -- No chart tag found: open tag editor for creation at this position
@@ -416,7 +421,9 @@ end)
 
 -- DEV: Dump chart tags for current surface with CTRL+F9
 script.on_event("ft-dev-dump-chart-tags", function(event)
-  local player = game.get_player(event.player_index)
+  local player_index = Helpers.find_player_index_in_event(event)
+  if not player_index then return end
+  local player = game.get_player(player_index)
   if not player then return end
   local surface = player.surface
   local chart_tags = player.force.find_chart_tags(surface)

@@ -6,7 +6,7 @@
 local Favorite = {}
 
 local Helpers = require("core.utils.helpers")
-local storage = require("core.storage")
+local Storage = require("core.storage")
 
 --- Creates a new Favorite instance for a given surface
 -- @param surface_index uint The surface index
@@ -23,7 +23,7 @@ end
 
 --- Returns the map_tag for this favorite (from storage for this surface)
 function Favorite:get_map_tag()
-  return storage.find_map_tag_by_gps_for_surface(self.surface_index, self.gps)
+  return Storage.find_map_tag_by_gps_for_surface(self.surface_index, self.gps)
 end
 
 return Favorite

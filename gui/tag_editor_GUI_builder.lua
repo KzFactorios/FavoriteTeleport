@@ -39,6 +39,10 @@ function TagEditorGUIBuilderClass:new(player, position, is_favorite, context)
 end
 
 function TagEditorGUIBuilderClass:build_outer_frame()
+  -- Ensure no duplicate outer frame exists
+  if self.gui.ft_tag_editor_outer_frame then
+    self.gui.ft_tag_editor_outer_frame.destroy()
+  end
   self.outer_frame = self.gui.add {
     type = "frame",
     name = "ft_tag_editor_outer_frame",
@@ -208,12 +212,12 @@ function TagEditorGUIBuilderClass:build_content_frame()
   content_frame.style.horizontally_stretchable = true
   content_frame.style.vertically_stretchable = true
 
-  local gps = self.position and Helpers.map_position_to_gps(self.position) or "[no pos]"
+  local gps = self.position and Helpers.map_position_to_gps(self.player.surface.index, self.position) or "[no pos]"
   add_row(content_frame, "ft_tag_editor_teleport_row", { "ft_tag_editor_teleport" },
     "te_tr_teleport_label", {
     type = "button",
     name = "ft_tag_editor_pos_btn",
-    caption = gps,
+    caption = Helpers.gps_map_position_string(gps),
     style = "ft_teleport_button"
   })
 

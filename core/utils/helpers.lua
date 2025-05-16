@@ -29,15 +29,28 @@ local function format_coord(n)
   return string.format("%s%03d", sign, abs_n)
 end
 
-function Helpers.format_gps(surface_index, x, y)
-  return string.format("%s.%s.%s", tostring(surface_index), format_coord(x), format_coord(y))
+function Helpers.format_gps(x, y, surface_index)
+  return string.format("%s.%s.%s", format_coord(x), format_coord(y), tostring(surface_index))
 end
 
---- Converts a gps (e.g., "2.000.-1350") to a MapPosition - surface index is not considered here
+--- Converts a MapPosition to a gps string (e.g., "000.-1350.1")
+-- gps string format: "x coordinate as string, min 3 chars"."y coordinate as string, min 3 chars"."surface_index as string (no padding)"
+-- @param map_pos MapPosition
+-- @param surface_index integer|string
+-- @return string
+function Helpers.map_position_to_gps(map_pos, surface_index)
+  if not map_pos then
+    -- Log or handle the nil map_pos case here if needed
+    return nil
+  end
+  return Helpers.format_gps(map_pos.x, map_pos.y, surface_index)
+end
+
+--- Converts a gps string to a MapPosition. Format: "xxx.yyy.surface_index" (surface_index is ignored here)
 -- @param gps string
 -- @return MapPosition
 function Helpers.gps_to_map_position(gps)
-  local _, x_str, y_str = gps:match("([%-?%d]+)%.([%-?%d]+)%.([%-?%d]+)")
+  local x_str, y_str, _ = gps:match("([%-?%d]+)%.([%-?%d]+)%.([%-?%d]+)")
   local x = tonumber(x_str)
   local y = tonumber(y_str)
   if x == -0 then x = 0 end
@@ -48,25 +61,20 @@ function Helpers.gps_to_map_position(gps)
   }
 end
 
---- Converts a MapPosition to a gps string (e.g., "000.-1350")
--- @param map_pos MapPosition
+--- Returns the "xxx.yyy" portion from a gps string of the format "xxx.yyy.surface_index"
+-- @param gps string
 -- @return string
-function Helpers.map_position_to_gps(surface_index, map_pos)
-  if not map_pos then
-    -- Log or handle the nil map_pos case here if needed
-    return nil
-  end
-  return Helpers.format_gps(surface_index, map_pos.x, map_pos.y)
+function Helpers.gps_map_position_string(gps)
+  local split = Helpers.split_string(gps, '.')
+  return string.format("%s.%s", split[1], split[2])
 end
 
-function Helpers.gps_from_map_tag(map_tag)
-  if not map_tag then return nil end
-  return Helpers.format_gps(map_tag.surface_index, map_tag.gps)
-end
-
+--- Returns the surface_index portion from a gps string of the format "xxx.yyy.surface_index"
+-- @param gps string
+-- @return string|nil
 function Helpers.get_surface_index_from_gps(gps)
   if not gps then return nil end
-  local surface_index, _x, _y = gps:match("([%-?%d]+)%.([%-?%d]+)%.([%-?%d]+)")
+  local _x, _y, surface_index = gps:match("([%-?%d]+)%.([%-?%d]+)%.([%-?%d]+)")
   return surface_index
 end
 
@@ -115,7 +123,7 @@ end
 -- @param fav table
 -- @return boolean
 function Helpers.favorite_slot_is_empty(fav)
-  return not fav or (fav.gps == nil or fav.gps == "")
+  return not fav or (fav.map_tag == nil or fav.map_tag == {})
 end
 
 --- Finds a favorite by gps in a surface's favorites array
@@ -141,6 +149,22 @@ function Helpers.get_surface_favorites_array(favorites, max_slots)
     arr[i] = favorites[i] or nil
   end
   return arr
+end
+
+-- Splits a string by the given delimiter and returns an array of substrings
+-- @param str string
+-- @param delimiter string
+-- @return table
+function Helpers.split_string(str, delimiter)
+  local result = {}
+  if type(str) ~= "string" or type(delimiter) ~= "string" or delimiter == "" then
+    return result
+  end
+  local pattern = string.format("([^%s]+)", delimiter:gsub("%%", "%%%%"))
+  for match in str:gmatch(pattern) do
+    table.insert(result, match)
+  end
+  return result
 end
 
 return Helpers

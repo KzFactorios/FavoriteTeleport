@@ -15,7 +15,7 @@
 -- All persistent data access should go through Context, not Storage, to allow for future extensibility.
 local Context = {}
 
-local Storage = require("core/storage")
+local Storage = require("core.storage")
 
 --- Initializes the persistent storage schema if needed
 function Context.init()
