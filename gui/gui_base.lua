@@ -37,4 +37,14 @@ function GuiBase.add_horizontal_flow(parent, name)
     }
 end
 
+--- Safely finds a child element by name in a parent (searches .children if direct lookup fails)
+function GuiBase.find_child_by_name(parent, name)
+    if not parent or not name then return nil end
+    if parent[name] then return parent[name] end
+    for _, child in pairs(parent.children or {}) do
+        if child.name == name then return child end
+    end
+    return nil
+end
+
 return GuiBase

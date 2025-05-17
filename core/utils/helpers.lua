@@ -25,7 +25,7 @@ end
 
 local function format_coord(n)
   local abs_n = math.abs(math.floor(n))
-  local sign = n < 0 and ""
+  local sign = n < 0 and "-" or ""
   return string.format("%s%03d", sign, abs_n)
 end
 
@@ -86,6 +86,17 @@ function Helpers.find_player_index_in_event(event)
     end
   end
   return nil
+end
+
+function Helpers.index_is_in_table(_table, idx)
+  if type(_table) == "table" then
+    for x, v in pairs(_table) do
+      if v == idx then
+        return true, x
+      end
+    end
+  end
+  return false, -1
 end
 
 -- Returns a new array with slot_num set and sorted by index order
@@ -165,6 +176,18 @@ function Helpers.split_string(str, delimiter)
     table.insert(result, match)
   end
   return result
+end
+
+function Helpers.find_by_predicate(_table, predicate)
+  if type(_table) ~= "table" or type(predicate) ~= "function" then
+    return nil, nil
+  end
+  for k, v in pairs(_table) do
+    if predicate(v, k) then
+      return v, k
+    end
+  end
+  return nil, nil
 end
 
 return Helpers

@@ -7,8 +7,11 @@ local MapTag = require("core/map_tag")
 local Constants = require("constants")
 local FaveBarGUI = require("gui/fave_bar_GUI")
 local TagEditorGUI = require("gui/tag_editor_GUI")
+local TagEditorGUIEvents = require("gui/tag_editor_GUI_events")
 local Storage = require("core.storage")
 local Helpers = require("core.utils.helpers")
+local GuiBase = require("gui/gui_base")
+local StorageViewerGUI = require("gui.storage_viewer_GUI")
 
 local Control = {}
 
@@ -31,6 +34,13 @@ local function update_cursor_position_label(player)
     label.caption = text
   end
 end
+
+-- Helper to get a player from an event
+local function get_event_player(event)
+  if not event or not event.player_index then return nil end
+  return game.get_player(event.player_index)
+end
+
 
 -- Main mod event registration and lifecycle management
 
@@ -164,83 +174,10 @@ script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
   ---@diagnostic disable-next-line: undefined-field
   local pos = (event.cursor_position and type(event.cursor_position) == "table") and event.cursor_position or
       (player.position or { x = 0, y = 0 })
-  local gps = Helpers.map_position_to_gps(player.surface.index, pos)
-
-  local chart_tags = Storage.get_chart_tags(player)
-  local chart_tag = nil
-
-  -- if there is a matching chart_tag with matching gps
-  for _, tag in pairs(chart_tags) do
-    if gps == Helpers.map_position_to_gps(player.surface.index, tag.position) then
-      chart_tag = tag
-      break
-    end
-  end
-
-  local map_tags = Storage.get_map_tags(player)
-  local map_tag = nil
-  for _, tag in pairs(map_tags) do
-    if gps == tag.gps then
-      map_tag = tag
-      break
-    end
-  end
+  local gps = Helpers.map_position_to_gps(pos, player.surface.index)
 
   -- this logic will build a matching map_tag upon tag_editor save
-  if chart_tag ~= nil and (map_tag ~= nil or map_tag ~= {}) then
-    -- build tag_editor with chart_tag and map_tag
-    TagEditorGUI.open(player, chart_tag.position, false, context)
-  elseif chart_tag ~= nil and not map_tag then
-    -- build tag_editor with chart_tag only
-    TagEditorGUI.open(player, chart_tag.position, false, context)
-  elseif not chart_tag and not map_tag then
-    -- build tag with the current event position
-    TagEditorGUI.open(player, pos, false, context)
-  elseif not chart_tag and map_tag ~= nil and map_tag ~= {} then
-    -- create a matching chart_tag with text == gps
-    MapTag.create_chart_tag_from_map_tag(player, map_tag)
-    -- open the tag editor with data from map_tag and matching chart_tag
-  end
-
-
-
-
-
-
-
-
-  local surface_index = player.surface.index
-  local storage = Storage.get()
-  local surfaces = storage.surfaces or {}
-  local map_tags = (surfaces[surface_index] and surfaces[surface_index].map_tags) or {}
-  -- Find the chart tag under the cursor using a larger bounding box (using pos)
-  local found_chart_tag = nil
-  local half_size = 1.2
-  for _, tag in pairs(chart_tags) do
-    if pos.x >= tag.position.x - half_size and pos.x <= tag.position.x + half_size
-        and pos.y >= tag.position.y - half_size and pos.y <= tag.position.y + half_size then
-      found_chart_tag = tag
-      break
-    end
-  end
-  local found_tag
-  local context
-  if found_chart_tag then
-    gps = Helpers.map_position_to_gps(found_chart_tag.position)
-    for _, tag in pairs(map_tags) do
-      if tag.gps == gps then
-        found_tag = tag
-        break
-      end
-    end
-    context = found_tag and { tag_data = found_tag, is_edit = true } or
-        { tag_data = { gps = gps }, is_edit = false }
-    TagEditorGUI.open(player, found_chart_tag.position, false, context)
-  else
-    -- No chart tag found: open tag editor for creation at this position
-    context = { tag_data = { gps = gps }, is_edit = false }
-    TagEditorGUI.open(player, pos, false, context)
-  end
+  TagEditorGUI.open(player, Helpers.gps_to_map_position(gps), false, Context)
 end)
 
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
@@ -253,91 +190,75 @@ script.on_event(Constants.events.STORAGE_DUMP, function(event)
     player.print("[FavoriteTeleport] Storage is not a table! Type: " .. type(storage))
     return
   end
-  if serpent then
-    player.print(serpent.block(storage, { comment = false }))
-  else
-    for k, v in pairs(storage) do
-      player.print(tostring(k) .. ": " .. tostring(v))
-    end
-  end
+  -- Use per-player expand/collapse state (in global or player table)
+  ft_storage_viewer_expand_state = ft_storage_viewer_expand_state or {}
+  local expand_state = ft_storage_viewer_expand_state[player_index] or {}
+  StorageViewerGUI.open(player, storage, expand_state)
 end)
 
-local _startup = nil
-
-script.on_event(defines.events.on_tick, function(event)
-  if not _startup then
-    for _, player in pairs(game.players) do
-      if not player then return end
-      Control.update_guis(player)
-    end
-    startup = 1
-  end
-  script.on_event(defines.events.on_tick, nil)
-end)
-
---[[script.on_nth_tick(RESPONSIVE_TICKS, function(event)
-  if not game then return end
-
-  for _, player in pairs(game.players) do
-    if player.character then
-      Control.close_guis(player)
-    end
-  end
-end)]]
-
+-- GUI event handler for close and expand/collapse
 script.on_event(defines.events.on_gui_click, function(event)
   if not event or not event.element or not event.element.valid then return end
-  -- Tag Editor GUI click handling
-  local tag_action = TagEditorGUI.on_click(event)
-  if tag_action == "close" then
-    if not event.player_index then return end
-    local player = game.get_player(event.player_index)
-    if player then
-      TagEditorGUI.close(player)
-    end
+  local player = event.player_index and game.get_player(event.player_index)
+  if not player then return end
+  if event.element.name == "ft_storage_viewer_close_btn" then
+    
+    StorageViewerGUI.close(player)
     return
   end
-
+  -- Handle expand/collapse
+  if event.element.name:find("^ft_storage_viewer_toggle_") then
+    local path = event.element.name:gsub("^ft_storage_viewer_toggle_", "")
+    ft_storage_viewer_expand_state = ft_storage_viewer_expand_state or {}
+    local expand_state = ft_storage_viewer_expand_state[player.index] or {}
+    expand_state[path] = not expand_state[path]
+    ft_storage_viewer_expand_state[player.index] = expand_state
+    local storage = remote.call("FavoriteTeleport", "get_storage")
+    StorageViewerGUI.open(player, storage, expand_state)
+    return
+  end
+  -- Tag Editor GUI click handling
+  local tag_action = TagEditorGUIEvents.on_click(event, TagEditorGUI, player)
+  if tag_action == "close" then
+    if not player then return end
+    TagEditorGUI.close(player)
+    return
+  end
   -- Handle FaveBarGUI button clicks (if needed)
   -- Add more GUI event handling here as you expand the GUIs
 end)
+
+-- Helper: robustly find a child element by name in a parent (searches .children if direct lookup fails)
+local function find_child_by_name(parent, name)
+  if not parent or not name then return nil end
+  if parent[name] then return parent[name] end
+  for _, child in pairs(parent.children or {}) do
+    if child.name == name then return child end
+  end
+  return nil
+end
 
 -- Tag Editor GUI: Enable/disable save button based on text or icon
 script.on_event(defines.events.on_gui_text_changed, function(event)
   if not event or not event.element or not event.element.valid then return end
   if event.element.name ~= "ft_tag_editor_textbox" then return end
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
   if not player then return end
-  local frame = player.gui.screen.ft_tag_editor_outer_frame
-  if not frame then return end
-  local save_btn = frame.ft_tag_editor_frame
-      and frame.ft_tag_editor_frame.ft_tag_editor_action_row
-      and frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
-  if save_btn then
-    -- Enable as soon as any text is present (including whitespace)
-    save_btn.enabled = (#event.element.text > 0)
-  end
+  TagEditorGUI.update_save_btn(player)
 end)
 
 script.on_event(defines.events.on_gui_elem_changed, function(event)
   if not event or not event.element or not event.element.valid then return end
   if event.element.name ~= "tag-editor-icon" then return end
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
   if not player then return end
-  local frame = player.gui.screen.ft_tag_editor_outer_frame
-  if not frame then return end
-  local save_btn = frame.ft_tag_editor_frame.ft_tag_editor_action_row.ft_tag_editor_save_btn
-  local text_box = frame.ft_tag_editor_frame.ft_tag_editor_text_row.ft_tag_editor_textbox
-  local text_val = text_box and text_box.text and text_box.text:match("%S")
-  local icon_val = event.element.elem_value
-  save_btn.enabled = (text_val ~= nil) or (icon_val ~= nil)
+  TagEditorGUI.update_save_btn(player)
 end)
 
--- Close tag editor GUI if ESC is pressed
 script.on_event(defines.events.on_gui_closed, function(event)
   if not event or not event.element or not event.player_index then return end
   if event.element.name == "ft_tag_editor_outer_frame" and event.gui_type == defines.gui_type.custom then
-    local player = game.get_player(event.player_index)
+    local player = get_event_player(event)
     if player then
       local gui = player.gui.screen
       if gui.ft_tag_editor_outer_frame then
@@ -358,22 +279,26 @@ local function destroy_tag_editor_frame(player)
   end
 end
 
+--[[
 script.on_event(defines.events.on_player_changed_surface, function(event)
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
+  -- do any surface/tag_collections need to be updated?
+  -- any player data that needs to be refreshed
   destroy_tag_editor_frame(player)
 end)
 
+
 script.on_event(defines.events.on_player_changed_position, function(event)
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
   destroy_tag_editor_frame(player)
 end)
 
 script.on_event(defines.events.on_player_toggled_map_editor, function(event)
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
   if not player then return end
   destroy_tag_editor_frame(player)
 end)
-
+]]
 -- This occurs when a player switches between different controller modes,
 --- such as moving from character control to god mode, spectator mode,
 --- or any other available controller type in the game
@@ -392,7 +317,7 @@ end)
 
 local function check_and_handle_render_mode_change(player)
   if not player then return end
-  local pdata = Context.get_player_data(player.index)
+  local pdata = Context.get_player_data(player)
   if not pdata then return end
   local last_mode = pdata.render_mode
   local current_mode = player.render_mode
@@ -407,6 +332,7 @@ local function check_and_handle_render_mode_change(player)
   end
 end
 
+--- Handle the case where the player does not close a gui in map mode - auto-close
 script.on_nth_tick(RESPONSIVE_TICKS, function(event)
   for _, player in pairs(game.connected_players) do
     check_and_handle_render_mode_change(player)

@@ -12,21 +12,24 @@ storage = {
   mod_version = "0.0.01",
   players = {
     [player_index] = {
-      [surface_index] = {
-        favorites = {
-          [slot_number] = {
-            slot_locked = boolean,
-            favorite = {
-              pos_string = string,
-              -- ...other favorite fields
-            }
-          },
-        },
-        -- ...other per-surface player data
-      },
       show_fave_bar_buttons = boolean,
       render_mode = string,
       -- ...other per-player data
+      surfaces = {
+        [surface_index] = {
+          favorites = {
+            [slot_number] = {
+              slot_locked = boolean,
+              favorite = {
+                gps = string,
+                slot_locked = boolean 
+                -- ...other favorite fields
+              }
+            },
+          },
+          -- ...other per-surface player data
+        }
+      },
     },
   },
   surfaces = {
@@ -34,9 +37,8 @@ storage = {
       maptags = {
         [tag_id] = {
           tag = LuaCustomChartTag,
-          pos_string = string,
+          gps = string,
           faved_by_players = { [player_index] = true },
-          text = string,
           description = string,
           -- ...other tag fields
         },

@@ -6,10 +6,18 @@
 --- @field get_text fun(self: MapTag): string|nil The text for the tag
 --- @field description string|nil Additional text for the tag
 --- @field faved_by_players uint[]
---- @field new fun(chart_tag:LuaCustomChartTag, position: MapPosition, player: LuaPlayer, is_favorite:boolean, icon: SignalID, text: string, description: string): MapTag|nil
+--- @field new fun(player: LuaPlayer, position: MapPosition, chart_tag:LuaCustomChartTag, is_favorite:boolean, description: string): MapTag|nil
 --- @field is_tag_valid fun(self: MapTag):boolean
 --- @field on_chart_tag_modified fun(event: any)
 local MapTag = {}
+
+-- Forward declare all methods to ensure they exist on the MapTag table
+MapTag.get_text = nil
+MapTag.is_tag_valid = nil
+MapTag.new = nil
+MapTag.on_chart_tag_modified = nil
+MapTag.is_tag_valid = nil
+MapTag.create_chart_tag_from_map_tag = nil
 
 local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
@@ -24,30 +32,25 @@ end
 
 --- Creates a new MapTag instance
 -- @param chart_tag LuaCustomChartTag|nil Optional: The underlying Factorio chart tag object
--- @param position MapPosition
--- @param player LuaPlayer
--- @param is_favorite boolean
--- @param icon string|nil
--- @param text string|nil
--- @param description string|nil
--- @return MapTag
-function MapTag.new(chart_tag, position, player, is_favorite, icon, text, description)
+function MapTag.new(player, position, chart_tag, is_favorite, description)
   if not player then return nil end
   local surface_index = player.surface.index
   local gps = get_gps(surface_index, position)
+  local text = chart_tag and chart_tag.text or ""
 
   if not chart_tag then
-    local tag_spec = {
+    local chart_tag_spec = {
       position = Helpers.gps_to_map_position(gps),
-      icon = icon,
-      text = text,
+      icon = nil,
+      text = "",
       last_user = player.name
     }
-    chart_tag = player.force.add_chart_tag(player.surface, tag_spec)
+    chart_tag = player.force.add_chart_tag(player.surface, chart_tag_spec)
     if not chart_tag then return nil end
   end
 
   local faved_by_players
+  ---@diagnostic disable-next-line: assign-type-mismatch
   if is_favorite then
     faved_by_players = {player.index}
   end
@@ -60,32 +63,22 @@ function MapTag.new(chart_tag, position, player, is_favorite, icon, text, descri
     text = text,
     description = description
   }
-  setmetatable(obj, { __index = MapTag })
-  return obj
-end
 
----@diagnostic disable-next-line: undefined-field
-function MapTag:get_text()
-  return (self.tag and self.tag.text) or self.text or nil
+  setmetatable(obj, { __index = MapTag })
+
+---@diagnostic disable-next-line: return-type-mismatch
+  return obj
 end
 
 --- Checks if the underlying map tag is valid
 -- @param self MapTag
--- @return boolean
+-- @return string | nil
 function MapTag:is_tag_valid()
   return self.tag ~= nil and self.tag.valid == true
 end
 
 -- handle changes from the stock tag editor
 -- see if we can throw this only when the gui-tag-edit (stock editor) makes changes
-function MapTag.on_chart_tag_modified(event)
-  -- TODO implement
-end
-
---- Creates a chart tag from a map_tag table for the given player and surface.
--- @param map_tag table The map_tag data (must have gps, text, icon, etc.)
--- @param player LuaPlayer The player for whom to create the chart tag
--- @return LuaCustomChartTag|nil The created chart tag, or nil on failure
 function MapTag.create_chart_tag_from_map_tag(player, map_tag)
   if not map_tag or not player or not player.valid then return nil end
   local pos = nil
@@ -103,5 +96,12 @@ function MapTag.create_chart_tag_from_map_tag(player, map_tag)
   Storage.reset_cached_chart_tags(player.surface.index)
   return chart_tag
 end
+
+MapTag.get_text = MapTag.get_text
+MapTag.is_tag_valid = MapTag.is_tag_valid
+MapTag.new = MapTag.new
+MapTag.on_chart_tag_modified = MapTag.on_chart_tag_modified
+MapTag.is_tag_valid = MapTag.is_tag_valid
+MapTag.create_chart_tag_from_map_tag = MapTag.create_chart_tag_from_map_tag
 
 return MapTag
