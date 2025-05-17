@@ -3,6 +3,12 @@ local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
 local MapTag = require("core.map_tag")
 
+local TagEditorGUIBuilder = {}
+
+-- Builder object for tag editor GUI
+local TagEditorGUIBuilderClass = {}
+TagEditorGUIBuilderClass.__index = TagEditorGUIBuilderClass
+
 -- Helper to add a row to the tag editor GUI
 local function add_row(parent, name, label_caption, label_style, element_def, opts)
   opts = opts or {}
@@ -16,23 +22,17 @@ local function add_row(parent, name, label_caption, label_style, element_def, op
   return row, label, element
 end
 
-local TagEditorGUIBuilder = {}
-
--- Builder object for tag editor GUI
-local TagEditorGUIBuilderClass = {}
-TagEditorGUIBuilderClass.__index = TagEditorGUIBuilderClass
-
-function TagEditorGUIBuilderClass:new(player, position, is_favorite, context)
-
+function TagEditorGUIBuilderClass:new(player, position, context)
   local gps = Helpers.format_gps(position.x, position.y, player.surface.index)
   local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
   local map_tag = Storage.find_map_tag_by_gps(player, gps)
 
-local TagEditorGUI = require("gui.tag_editor_GUI")  if not chart_tag then
+  if not chart_tag then
+    local _text = Helpers.gps_map_position_string(gps)
     local chart_tag_spec = {
       position = position,
       icon = nil,
-      text = Helpers.gps_map_position_string(gps),
+      text = _text,
       last_user = player.name
     }
     chart_tag = player.force.add_chart_tag(player.surface, chart_tag_spec)
@@ -41,13 +41,13 @@ local TagEditorGUI = require("gui.tag_editor_GUI")  if not chart_tag then
   end
 
   if not map_tag then
-    map_tag = MapTag.new(player, position, chart_tag, is_favorite, "")
+    map_tag = MapTag.new(player, position, chart_tag, false, "")
   end
 
   local o = {
     player = player,
     position = position,
-    is_favorite = is_favorite,
+    is_favorite = map_tag.is_favorite,
     context = context,
     gui = player.gui.screen,
     outer_frame = nil,
@@ -149,11 +149,11 @@ function TagEditorGUIBuilderClass:build_content_frame()
 
   local last_user_label = last_user_container.add {
     type = "label",
-    caption = {"ft_tag_editor_last_user", ": "},
+    caption = { "ft_tag_editor_last_user", ": " },
   }
   last_user_label.style.horizontally_stretchable = false
   last_user_label.style.font = "default-bold"
-  last_user_label.style.font_color = {r=1, g=0.901961, b=0.752941}
+  last_user_label.style.font_color = { r = 1, g = 0.901961, b = 0.752941 }
   last_user_label.style.top_margin = 2
   last_user_label.style.left_margin = 8
   last_user_label.style.right_margin = 0
@@ -169,7 +169,7 @@ function TagEditorGUIBuilderClass:build_content_frame()
   }
   last_user_value_label.style.horizontally_stretchable = false
   last_user_value_label.style.font = "default-bold"
-  last_user_value_label.style.font_color = {r=1, g=0.901961, b=0.752941}
+  last_user_value_label.style.font_color = { r = 1, g = 0.901961, b = 0.752941 }
   last_user_value_label.style.top_margin = 2
   last_user_value_label.style.left_margin = 4
   last_user_value_label.style.vertical_align = "center"
@@ -216,14 +216,6 @@ function TagEditorGUIBuilderClass:build_content_frame()
   delete_btn.style.left_margin = 2
   delete_btn.style.right_margin = 0
 
-  local effective_last_user = self.chart_tag and self.chart_tag.last_user
-  if not effective_last_user or effective_last_user == "" then
-    effective_last_user = self.player.name
-  end
-  if self.context and self.context.is_edit and effective_last_user == self.player.name and self.context.tag_data and self.context.tag_data.chart_tag then
-    move_btn.enabled = true
-  end
-
   local content_frame = frame.add {
     type = "frame",
     name = "ft_tag_editor_content_frame",
@@ -236,28 +228,28 @@ function TagEditorGUIBuilderClass:build_content_frame()
 
   add_row(content_frame, "ft_tag_editor_teleport_row", { "ft_tag_editor_teleport" },
     "te_tr_teleport_label", {
-    type = "button",
-    name = "ft_tag_editor_pos_btn",
-    caption = Helpers.gps_map_position_string(self.gps),
-    style = "ft_teleport_button"
-  })
+      type = "button",
+      name = "ft_tag_editor_pos_btn",
+      caption = Helpers.gps_map_position_string(self.gps),
+      style = "ft_teleport_button"
+    })
 
   --local max_slots = Constants.MAX_FAVORITE_SLOTS
-  local available_slots = Storage.get_player_favorites(self.player)
+  local available_slots = Storage.get_available_favorite_slots(self.player)
   local favorite_enabled = #available_slots > 0
+
   add_row(content_frame, "ft_tag_editor_favorite_row", { "ft_tag_editor_favorite_label" },
     "te_tr_favorite_label", {
-    type = "sprite-button",
-    name = "ft_tag_editor_favorite_btn",
-    sprite = (self.is_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
-    tooltip = { "ft_tag_editor_favorite_tooltip" },
-    style = "ft_favorite_button",
-    enabled = favorite_enabled
-  }, { top_margin = 8 })
+      type = "sprite-button",
+      name = "ft_tag_editor_favorite_btn",
+      sprite = (self.is_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
+      tooltip = { "ft_tag_editor_favorite_tooltip" },
+      style = "ft_favorite_button",
+      enabled = favorite_enabled
+    }, { top_margin = 8 })
   if not favorite_enabled then
     self.is_favorite = false
   end
-
 
   add_row(content_frame, "ft_tag_editor_icon_row", { "ft_tag_editor_icon" }, "te_tr_icon_label", {
     type = "choose-elem-button",
@@ -320,14 +312,15 @@ function TagEditorGUIBuilderClass:finalize()
   return self.outer_frame
 end
 
-function TagEditorGUIBuilder.open(player, position, is_favorite, context, tag_editor_gui_module)
-  local builder = TagEditorGUIBuilderClass:new(player, position, is_favorite, context)
+function TagEditorGUIBuilder.open(player, position, context, tag_editor_gui_module)
+  local builder = TagEditorGUIBuilderClass:new(player, position, context)
   if not builder then return end
   builder:build_outer_frame()
-    :build_titlebar()
-    :build_content_frame()
-    :build_action_row()
-    :finalize()
+      :build_titlebar()
+      :build_content_frame()
+      :build_action_row()
+      :finalize()
+
   -- Safe: Only update the save button state if update_save_btn does NOT trigger a GUI rebuild
   if tag_editor_gui_module and type(tag_editor_gui_module.update_save_btn) == "function" then
     local ok, err = pcall(tag_editor_gui_module.update_save_btn, player)

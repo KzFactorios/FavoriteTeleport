@@ -7,9 +7,6 @@
   These are required for runtime correctness in Factorio multiplayer and migration scenarios.
   See comments above each such block for details.
 ]]
-
-local TagEditorGUI = {}
-TagEditorGUI.current_position = nil -- Stores the current MapPosition for the open tag editor
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
@@ -17,55 +14,20 @@ local TagEditorGUIBuilder = require("gui/tag_editor_GUI_builder")
 local TagEditorGUIValidation = require("gui/tag_editor_GUI_validation")
 local TagEditorGUIEvents = require("gui/tag_editor_GUI_events")
 
--- Helper: Find a map tag by gps in a tag list
-local function find_map_tag_by_gps(tag_list, gps)
-  for idx, tag in pairs(tag_list) do
-    if tag.gps == gps then
-      return tag, idx
-    end
-  end
-  return nil, nil
-end
+local TagEditorGUI = {}
+TagEditorGUI.current_position = nil -- Stores the current MapPosition for the open tag editor
 
--- Favorite slot helpers using new accessors
-TagEditorGUI.get_available_favorite_slots = function(player)
-  local favorites = Storage.get_player_favorites(player)
-  local max_slots = Constants.MAX_FAVORITE_SLOTS
-  local count = 0
-  for i = 1, max_slots do
-    if not favorites[i] then count = count + 1 end
-  end
-  return count
-end
-
-TagEditorGUI.get_next_available_favorite_slot = function(player)
-  local favorites = Storage.get_player_favorites(player)
-  local max_slots = Constants.MAX_FAVORITE_SLOTS
-  for i = 1, max_slots do
-    if not favorites[i] then return i end
-  end
-  return nil
-end
-
-TagEditorGUI.has_available_favorite_slot = function(player)
-  local favorites = Storage.get_player_favorites(player)
-  local max_slots = Constants.MAX_FAVORITE_SLOTS
-  for i = 1, max_slots do
-    if not favorites[i] then return true end
-  end
-  return false
-end
-
-TagEditorGUI.open = function(player, position, is_favorite, context)
+TagEditorGUI.open = function(player, position, context)
   TagEditorGUI.current_position = position
-  return TagEditorGUIBuilder.open(player, position, is_favorite, context, TagEditorGUI)
+  return TagEditorGUIBuilder.open(player, position, context, TagEditorGUI)
 end
+
 TagEditorGUI.close = function(player)
   TagEditorGUI.current_position = nil
   return TagEditorGUIBuilder.close(player)
 end
-TagEditorGUI.add_row = TagEditorGUIBuilder.add_row
 
+TagEditorGUI.add_row = TagEditorGUIBuilder.add_row
 TagEditorGUI.on_click = TagEditorGUIEvents.on_click
 
 --- Handles the confirm/save action for the tag editor GUI

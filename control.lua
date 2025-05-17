@@ -35,6 +35,27 @@ local function update_cursor_position_label(player)
   end
 end
 
+-- Register a custom input for right-click in chart view to open the tag editor
+script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
+  local player_index = Helpers.find_player_index_in_event(event)
+  if not player_index then return end
+  local player = game.get_player(player_index)
+  if not player then return end
+
+  -- Ignore right-clicks in render_mode.game or render_mode.chart_zoomed_in
+  if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
+    return
+  end
+  -- Use event.cursor_position if available, otherwise fallback to player.position
+  ---@diagnostic disable-next-line: undefined-field
+  local pos = (event.cursor_position and type(event.cursor_position) == "table") and event.cursor_position or
+      (player.position or { x = 0, y = 0 })
+  local gps = Helpers.map_position_to_gps(pos, player.surface.index)
+
+  -- this logic will build a matching map_tag upon tag_editor save
+  TagEditorGUI.open(player, pos, Context)
+end)
+
 -- Helper to get a player from an event
 local function get_event_player(event)
   if not event or not event.player_index then return nil end
@@ -46,6 +67,7 @@ end
 
 script.on_init(function()
   Context.init()
+  Storage.populate_all_chart_tags(game)
   for _, player in pairs(game.players) do
     FaveBarGUI.build(player)
   end
@@ -57,6 +79,7 @@ script.on_load(function()
 end)
 
 script.on_configuration_changed(function(event)
+  Storage.populate_all_chart_tags(game)
   --[[if event.mod_changes and event.mod_changes["FavoriteTeleport"] then
     local changes = event.mod_changes["FavoriteTeleport"]
 
@@ -158,27 +181,6 @@ for i = 1, 10 do
     -- Hotkey teleport logic to be implemented
   end)
 end
-
--- Register a custom input for right-click in chart view to open the tag editor
-script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
-  local player_index = Helpers.find_player_index_in_event(event)
-  if not player_index then return end
-  local player = game.get_player(player_index)
-  if not player then return end
-
-  -- Ignore right-clicks in render_mode.game or render_mode.chart_zoomed_in
-  if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
-    return
-  end
-  -- Use event.cursor_position if available, otherwise fallback to player.position
-  ---@diagnostic disable-next-line: undefined-field
-  local pos = (event.cursor_position and type(event.cursor_position) == "table") and event.cursor_position or
-      (player.position or { x = 0, y = 0 })
-  local gps = Helpers.map_position_to_gps(pos, player.surface.index)
-
-  -- this logic will build a matching map_tag upon tag_editor save
-  TagEditorGUI.open(player, Helpers.gps_to_map_position(gps), false, Context)
-end)
 
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
   local player_index = Helpers.find_player_index_in_event(event)

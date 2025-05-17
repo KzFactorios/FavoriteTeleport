@@ -51,8 +51,8 @@ end
 -- @return MapPosition
 function Helpers.gps_to_map_position(gps)
   local x_str, y_str, _ = gps:match("([%-?%d]+)%.([%-?%d]+)%.([%-?%d]+)")
-  local x = tonumber(x_str)
-  local y = tonumber(y_str)
+  local x = math.floor(x_str)
+  local y = math.floor(y_str)
   if x == -0 then x = 0 end
   if y == -0 then y = 0 end
   return {

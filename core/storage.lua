@@ -85,7 +85,6 @@ local function get_surfaces_data(surface_index)
   if not storage.surfaces[surface_index].map_tags then
     storage.surfaces[surface_index].map_tags = {}
   end
-
   return storage.surfaces[surface_index]
 end
 
@@ -98,9 +97,7 @@ function Storage.get_chart_tags(player)
   if not surface_data then return {} end                       -- the initalizer guarantees this
 
   if not surface_data.chart_tags or surface_data.chart_tags == {} or #surface_data.chart_tags == 0 then
-    if player.force and player.force.valid then
-      surface_data.chart_tags = player.force.find_chart_tags(player.surface)
-    end
+    surface_data.chart_tags = player.force.find_chart_tags(player.surface)
   end
 
   return surface_data.chart_tags or {}
@@ -134,10 +131,16 @@ end
 
 function Storage.find_chart_tag_by_gps(player, gps)
   local chart_tags = Storage.get_chart_tags(player)
-  if chart_tags then
-    for _, chart_tag in ipairs(chart_tags) do
-      if Helpers.format_gps(chart_tag.position.x, chart_tag.position.y, player.surface.index) 
-        == gps then return chart_tag end
+  if not chart_tags then return nil end
+  local target_pos = Helpers.gps_to_map_position(gps)
+  if not target_pos then return nil end
+  for _, chart_tag in ipairs(chart_tags) do
+    if chart_tag.position then
+      local dx = math.abs(chart_tag.position.x - target_pos.x)
+      local dy = math.abs(chart_tag.position.y - target_pos.y)
+      if dx <= 20 and dy <= 20 then
+        return chart_tag
+      end
     end
   end
   return nil
@@ -196,7 +199,7 @@ end
 
 --- Ensures all slots are initialized for a favorites array (helper)
 ---@param slots table[]
----@param surface_index integer
+---@param surface_index uint
 function Storage.ensure_favorite_slots_initialized(slots, surface_index)
   if #slots < Constants.MAX_FAVORITE_SLOTS then
     for slot = 1, Constants.MAX_FAVORITE_SLOTS do
@@ -229,6 +232,37 @@ end
 function Storage.count_used_favorite_slots(player)
   local favorites = Storage.get_player_favorites(player)
   return Helpers.count_used_favorite_slots(favorites)
+end
+
+--- Returns the number of available favorite slots for a player
+function Storage.get_available_favorite_slots(player)
+  local favorites = Storage.get_player_favorites(player)
+  local max_slots = Constants.MAX_FAVORITE_SLOTS
+  local count = 0
+  for i = 1, max_slots do
+    if not favorites[i] then count = count + 1 end
+  end
+  return count
+end
+
+--- Returns the next available favorite slot index for a player, or nil if none
+function Storage.get_next_available_favorite_slot(player)
+  local favorites = Storage.get_player_favorites(player)
+  local max_slots = Constants.MAX_FAVORITE_SLOTS
+  for i = 1, max_slots do
+    if not favorites[i] then return i end
+  end
+  return nil
+end
+
+--- Returns true if the player has at least one available favorite slot
+function Storage.has_available_favorite_slots(player)
+  local favorites = Storage.get_player_favorites(player)
+  local max_slots = Constants.MAX_FAVORITE_SLOTS
+  for i = 1, max_slots do
+    if not favorites[i] then return true end
+  end
+  return false
 end
 
 --- Called when a player leaves the game; cleans up their tag ownership and favorites
@@ -277,6 +311,24 @@ function Storage.reset_cached_chart_tags(surface_index)
   local storage = Storage.get()
   if storage.surfaces and storage.surfaces[surface_index] then
     storage.surfaces[surface_index].chart_tags = nil
+  end
+end
+
+--- Populates chart_tags for all surfaces and all forces in the game.
+-- @param game LuaGameScript
+function Storage.populate_all_chart_tags(game)
+  if not game or not game.surfaces or not game.forces then return end
+  for _, surface in pairs(game.surfaces) do
+    local surface_index = surface.index
+    local surface_data = get_surfaces_data(surface_index)
+    local chart_tags = {}
+    for _, force in pairs(game.forces) do
+      local force_index = force.index
+      local tags = surface.find_chart_tags(force) or {}
+      if type(tags) ~= "table" then tags = {} end
+      chart_tags[force_index] = tags
+    end
+    surface_data.chart_tags = chart_tags
   end
 end
 
