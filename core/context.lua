@@ -11,8 +11,7 @@
 
 --- @class Context
 --- @field get_player_data fun(player: LuaPlayer): table
----@class Context
----@field player LuaPlayer
+--- @field player LuaPlayer
 local Context = {}
 
 local Storage = require("core.storage")

@@ -29,8 +29,7 @@ function MapTag.new(player, position, chart_tag, is_favorite, description)
   if not player then return nil end
 
   local surface_index = player.surface.index
-  local gps = Helpers.format_gps(position.x, position.y, surface_index)
-  local text = chart_tag and chart_tag.text or ""
+  local gps = Helpers.map_position_to_gps(position, surface_index)
 
   -- Only create a chart_tag if one is provided; do not create by default
   -- This prevents chart_tag creation on right-click before tag editor confirm
@@ -53,12 +52,19 @@ function MapTag.new(player, position, chart_tag, is_favorite, description)
 
   local obj = {
     gps = gps,
-    tag = chart_tag,
-    faved_by_players = faved_by_players,
+    tag = chart_tag, -- can be nil
+    faved_by_players = faved_by_players or {},
+    description = description,
     created_by = player.name, -- Always use player.name for created_by (not index)
-    text = text,
-    description = description
   }
+
+  -- Remove any runtime object references before storing
+  if obj.tag then obj.tag = nil end
+  for k, v in pairs(obj) do
+    if type(v) == "table" and v.__self then
+      obj[k] = nil
+    end
+  end
 
   setmetatable(obj, { __index = MapTag })
 

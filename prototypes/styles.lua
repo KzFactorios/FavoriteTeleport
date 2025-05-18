@@ -1,4 +1,4 @@
-local PREFIX = require("constants").PREFIX
+local Constants = require("constants")
 
 ---@diagnostic disable-next-line: undefined-global
 local gui_style = data.raw["gui-style"].default
@@ -95,6 +95,15 @@ gui_style.ft_favorite_button = {
 
 -- Icon picker button style (fix: use slot_button as parent, since choose_elem_button is not a valid parent for button_style)
 gui_style.ft_icon_picker_button = {
+  type = "button_style",
+  parent = "slot_button",
+  width = 36,
+  height = 36,
+  horizontally_stretchable = "off"
+}
+
+-- Toggle favorite mode button style (fixes missing style error)
+gui_style.ft_toggle_favorite_mode_button = {
   type = "button_style",
   parent = "slot_button",
   width = 36,

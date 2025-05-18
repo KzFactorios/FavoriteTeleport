@@ -1,5 +1,6 @@
-local Helpers = require("core.utils.helpers")
+local Storage = require("core.storage")
 local Constants = require("constants")
+local Helpers = require("core.utils.helpers")
 
 -- Storage.lua
 -- Centralized persistent storage handler for mod
@@ -47,7 +48,7 @@ function Storage.get_player_data(player)
 
   if not pdata["show_fave_bar_buttons"] then pdata["show_fave_bar_buttons"] = true end
 
----@diagnostic disable-next-line: undefined-global
+  ---@diagnostic disable-next-line: undefined-global
   if not pdata["render_mode"] then pdata["render_mode"] = defines.render_mode.game end
 
   if not pdata.surfaces then pdata.surfaces = {} end
@@ -138,7 +139,7 @@ function Storage.find_chart_tag_by_gps(player, gps)
     if chart_tag.position then
       local dx = math.abs(chart_tag.position.x - target_pos.x)
       local dy = math.abs(chart_tag.position.y - target_pos.y)
-      if dx <= 20 and dy <= 20 then
+      if dx <= Constants.settings.BOUNDING_BOX_TOLERANCE and dy <= Constants.settings.BOUNDING_BOX_TOLERANCE then
         return chart_tag
       end
     end
@@ -156,6 +157,16 @@ function Storage.add_or_update_map_tag(player, map_tag)
     end
   end
   --if not found then--
+
+  -- Remove any runtime object references before storing
+  if map_tag.tag then map_tag.tag = nil end
+  -- Only store serializable fields (gps, faved_by_players, created_by, text, description, etc)
+  for k, v in pairs(map_tag) do
+    if type(v) == "table" and v.__self then
+      map_tag[k] = nil
+    end
+  end
+
   table.insert(map_tags, map_tag)
 end
 
@@ -165,12 +176,13 @@ end
           favorites = { ]]
 function Storage.get_ALL_player_favorites(player)
   if not player or not player.valid then return {} end
-  local faves = {}
   local pdata = Storage.get_player_data(player)
   local favorites = {}
-  for i = 1, #pdata.surfaces do
-    for _, v in ipairs(pdata.surfaces[i]) do
-      table.insert(favorites, v)
+  for _, surface_data in pairs(pdata.surfaces) do
+    if surface_data.favorites then
+      for _, v in ipairs(surface_data.favorites) do
+        table.insert(favorites, v)
+      end
     end
   end
   return favorites
@@ -190,8 +202,13 @@ function Storage.get_player_favorites(player)
     pdata.favorites[surface_index] = {}
   end
   local faves = pdata.favorites[surface_index]
-  if not faves or #faves < Constants.MAX_FAVORITE_SLOTS then
+  if not faves then
+    faves = {}
+    pdata.favorites[surface_index] = faves
+  end
+  if #faves < Constants.MAX_FAVORITE_SLOTS then
     faves = Storage.ensure_favorite_slots_initialized(faves, surface_index)
+    pdata.favorites[surface_index] = faves
   end
 
   return faves
@@ -216,7 +233,7 @@ function Storage.ensure_favorite_slots_initialized(slots, surface_index)
   return slots
 end
 
---- Finds a favorite by gps for a player and surface
+--- Finds a single favorite by gps for a player and surface
 function Storage.find_favorite_by_gps(player, gps)
   local favorites = Storage.get_player_favorites(player)
   return Helpers.find_favorite_by_gps(favorites, gps)
@@ -225,7 +242,11 @@ end
 --- Returns true if the favorite slot is empty for a player and surface
 function Storage.favorite_slot_is_empty(player, slot)
   local favorites = Storage.get_player_favorites(player)
-  return Helpers.favorite_slot_is_empty(favorites[slot])
+  if not favorites[slot] then
+    return true
+  end
+---@diagnostic disable-next-line: need-check-nil
+  return not favorites[slot].map_tag or favorites[slot].map_tag == {}
 end
 
 --- Returns the number of used slots in a player's favorites for a surface
@@ -235,12 +256,15 @@ function Storage.count_used_favorite_slots(player)
 end
 
 --- Returns the number of available favorite slots for a player
-function Storage.get_available_favorite_slots(player)
+function Storage.get_available_favorite_slots_count(player)
   local favorites = Storage.get_player_favorites(player)
   local max_slots = Constants.MAX_FAVORITE_SLOTS
   local count = 0
   for i = 1, max_slots do
-    if not favorites[i] then count = count + 1 end
+---@diagnostic disable-next-line: need-check-nil
+    if not favorites[i] or not favorites[i].map_tag and favorites[i].map_tag ~= {} then
+      count = count + 1
+    end
   end
   return count
 end
@@ -317,14 +341,16 @@ end
 --- Populates chart_tags for all surfaces and all forces in the game.
 -- @param game LuaGameScript
 function Storage.populate_all_chart_tags(game)
-  if not game or not game.surfaces or not game.forces then return end
+  if not game or not game.surfaces or not game.forces then
+    return
+  end
   for _, surface in pairs(game.surfaces) do
     local surface_index = surface.index
     local surface_data = get_surfaces_data(surface_index)
     local chart_tags = {}
     for _, force in pairs(game.forces) do
       local force_index = force.index
-      local tags = surface.find_chart_tags(force) or {}
+      local tags = force.find_chart_tags(surface) or {}
       if type(tags) ~= "table" then tags = {} end
       chart_tags[force_index] = tags
     end

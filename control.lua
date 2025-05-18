@@ -2,15 +2,15 @@
 -- control.lua
 -- Main entry point for event registration and mod lifecycle
 
-local Context = require("core/context")
-local MapTag = require("core/map_tag")
+local Context = require("core.context")
+local MapTag = require("core.map_tag")
 local Constants = require("constants")
-local FaveBarGUI = require("gui/fave_bar_GUI")
-local TagEditorGUI = require("gui/tag_editor_GUI")
-local TagEditorGUIEvents = require("gui/tag_editor_GUI_events")
+local FaveBarGUI = require("gui.fave_bar_GUI")
+local TagEditorGUI = require("gui.tag_editor_GUI")
+local TagEditorGUIEvents = require("gui.tag_editor_GUI_events")
 local Storage = require("core.storage")
 local Helpers = require("core.utils.helpers")
-local GuiBase = require("gui/gui_base")
+local GuiBase = require("gui.gui_base")
 local StorageViewerGUI = require("gui.storage_viewer_GUI")
 
 local Control = {}
@@ -19,6 +19,7 @@ local RESPONSIVE_TICKS = 30 * 1
 
 -- Utility: Show player position in top left corner in map view (dev-only, ultra-lean)
 local CURSOR_LABEL_NAME = "ft_cursor_position_label"
+
 local function update_cursor_position_label(player)
   if not player or not player.valid then return end
   local pos = player.position or { x = 0, y = 0 }
@@ -35,33 +36,32 @@ local function update_cursor_position_label(player)
   end
 end
 
+--- Helper to get a player using player_index from an event
+--- @returns LuaPlayer|nil
+local function get_event_player(event)
+  if not event or not event.player_index then return nil end
+  return game.get_player(event.player_index)
+end
+
 -- Register a custom input for right-click in chart view to open the tag editor
 script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
-  local player_index = Helpers.find_player_index_in_event(event)
-  if not player_index then return end
-  local player = game.get_player(player_index)
+  game.print("ON_OPEN_TAG_EDITOR event fired") -- TEMP DEBUG
+  local player = get_event_player(event)
   if not player then return end
 
   -- Ignore right-clicks in render_mode.game or render_mode.chart_zoomed_in
   if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
     return
   end
+
   -- Use event.cursor_position if available, otherwise fallback to player.position
   ---@diagnostic disable-next-line: undefined-field
   local pos = (event.cursor_position and type(event.cursor_position) == "table") and event.cursor_position or
       (player.position or { x = 0, y = 0 })
-  local gps = Helpers.map_position_to_gps(pos, player.surface.index)
 
   -- this logic will build a matching map_tag upon tag_editor save
   TagEditorGUI.open(player, pos, Context)
 end)
-
--- Helper to get a player from an event
-local function get_event_player(event)
-  if not event or not event.player_index then return nil end
-  return game.get_player(event.player_index)
-end
-
 
 -- Main mod event registration and lifecycle management
 
@@ -107,11 +107,7 @@ script.on_configuration_changed(function(event)
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if not event then return end
-  -- .player_index is optional in the API but we need the player index in our logic
-  if not event.player_index then return end
-
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
   if not player then return end
 
   local setting_name = event.setting
@@ -128,30 +124,36 @@ script.on_event(defines.events.on_chart_tag_modified, function(event)
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
-  local player = game.get_player(event.player_index)
-  if player then
-    FaveBarGUI.build(player)
-  end
+  local player = get_event_player(event)
+  if not player then return end
+  FaveBarGUI.build(player)
 end)
 
 script.on_event(defines.events.on_player_joined_game, function(event)
-  --STUB
+  local player = get_event_player(event)
+  if not player then return end
+  -- TODO
 end)
 
 script.on_event(defines.events.on_player_left_game, function(event)
+  local player = get_event_player(event)
+  if not player then return end
   -- cleanup player's data?
 end)
 
 script.on_event(defines.events.on_player_removed, function(event)
+  local player = get_event_player(event)
+  if not player then return end
   -- cleanup player's data?
 end)
 
 script.on_event(defines.events.script_raised_teleported, function(event)
-  -- STUB
+  local player = get_event_player(event)
+  if not player then return end
 end)
 
 script.on_event(defines.events.on_player_changed_force, function(event)
-  local player = game.get_player(event.player_index)
+  local player = get_event_player(event)
   if not player then return end
   -- implemented to handle EditorExtensions incompat? 1/20/2025
   -- TODO when implemented pcall(context.reset_surface_chart_tags, player)
@@ -174,60 +176,59 @@ end)
 -- set events for hotkeys
 for i = 1, 10 do
   script.on_event(Constants.events.TELEPORT_TO_FAVORITE .. i, function(event)
-    local player_index = Helpers.find_player_index_in_event(event)
-    if not player_index then return end
-    local player = game.get_player(player_index)
+    local player = get_event_player(event)
     if not player then return end
     -- Hotkey teleport logic to be implemented
   end)
 end
 
 script.on_event(Constants.events.STORAGE_DUMP, function(event)
-  local player_index = Helpers.find_player_index_in_event(event)
-  if not player_index then return end
-  local player = game.get_player(player_index)
+  local player = get_event_player(event)
   if not player then return end
+
   local storage = remote.call("FavoriteTeleport", "get_storage")
   if type(storage) ~= "table" then
     player.print("[FavoriteTeleport] Storage is not a table! Type: " .. type(storage))
     return
   end
+
   -- Use per-player expand/collapse state (in global or player table)
   ft_storage_viewer_expand_state = ft_storage_viewer_expand_state or {}
   local expand_state = ft_storage_viewer_expand_state[player_index] or {}
   StorageViewerGUI.open(player, storage, expand_state)
 end)
 
--- GUI event handler for close and expand/collapse
+-- Helper: manage per-player expand/collapse state for storage viewer
+local function update_storage_viewer_expand_state(player, path)
+  ft_storage_viewer_expand_state = ft_storage_viewer_expand_state or {}
+  local expand_state = ft_storage_viewer_expand_state[player.index] or {}
+  expand_state[path] = not expand_state[path]
+  ft_storage_viewer_expand_state[player.index] = expand_state
+  return expand_state
+end
+
+-- Unified GUI event handler for storage viewer and tag editor
 script.on_event(defines.events.on_gui_click, function(event)
-  if not event or not event.element or not event.element.valid then return end
-  local player = event.player_index and game.get_player(event.player_index)
+  local player = get_event_player(event)
   if not player then return end
   if event.element.name == "ft_storage_viewer_close_btn" then
-    
     StorageViewerGUI.close(player)
     return
   end
-  -- Handle expand/collapse
   if event.element.name:find("^ft_storage_viewer_toggle_") then
     local path = event.element.name:gsub("^ft_storage_viewer_toggle_", "")
-    ft_storage_viewer_expand_state = ft_storage_viewer_expand_state or {}
-    local expand_state = ft_storage_viewer_expand_state[player.index] or {}
-    expand_state[path] = not expand_state[path]
-    ft_storage_viewer_expand_state[player.index] = expand_state
+    local expand_state = update_storage_viewer_expand_state(player, path)
     local storage = remote.call("FavoriteTeleport", "get_storage")
     StorageViewerGUI.open(player, storage, expand_state)
     return
   end
-  -- Tag Editor GUI click handling
+
+  -- Tag Editor GUI click handling (delegates filtering to TagEditorGUIEvents)
   local tag_action = TagEditorGUIEvents.on_click(event, TagEditorGUI, player)
   if tag_action == "close" then
-    if not player then return end
     TagEditorGUI.close(player)
     return
   end
-  -- Handle FaveBarGUI button clicks (if needed)
-  -- Add more GUI event handling here as you expand the GUIs
 end)
 
 -- Helper: robustly find a child element by name in a parent (searches .children if direct lookup fails)
@@ -258,14 +259,12 @@ script.on_event(defines.events.on_gui_elem_changed, function(event)
 end)
 
 script.on_event(defines.events.on_gui_closed, function(event)
-  if not event or not event.element or not event.player_index then return end
   if event.element.name == "ft_tag_editor_outer_frame" and event.gui_type == defines.gui_type.custom then
     local player = get_event_player(event)
-    if player then
-      local gui = player.gui.screen
-      if gui.ft_tag_editor_outer_frame then
-        gui.ft_tag_editor_outer_frame.destroy()
-      end
+    if not player then return end
+    local gui = player.gui.screen
+    if gui.ft_tag_editor_outer_frame then
+      gui.ft_tag_editor_outer_frame.destroy()
     end
   end
 end)
@@ -306,14 +305,12 @@ end)
 --- or any other available controller type in the game
 --- ie: fave bar should only show in game mode
 script.on_event(defines.events.on_player_controller_changed, function(event)
-  if game then
-    local player = game.get_player(event.player_index)
-    if not player then return end
+  local player = get_event_player(event)
+  if not player then return end
 
-    -- if we are not in regular/game view and a fave bar exists
-    if player.render_mode == defines.render_mode.game then
-      destroy_tag_editor_frame(player)
-    end
+  -- if we are not in regular/game view and the tag_editor is open
+  if player.render_mode == defines.render_mode.game then
+    destroy_tag_editor_frame(player)
   end
 end)
 
@@ -349,12 +346,10 @@ end)
 
 -- DEV: Dump chart tags for current surface with CTRL+F9
 script.on_event("ft-dev-dump-chart-tags", function(event)
-  local player_index = Helpers.find_player_index_in_event(event)
-  if not player_index then return end
-  local player = game.get_player(player_index)
+  local player = get_event_player(event)
   if not player then return end
-  local surface = player.surface
-  local chart_tags = player.force.find_chart_tags(surface)
+
+  local chart_tags = player.force.find_chart_tags(player.surface)
   if not chart_tags or #chart_tags == 0 then
     player.print("[DEV] No chart tags found on this surface.")
     return

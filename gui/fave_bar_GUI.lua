@@ -4,10 +4,10 @@
 local FaveBarGUI = {}
 
 local Constants = require("constants")
-local Context = require("core/context")
-local Favorite = require("core/favorite")
-local MapTag = require("core/map_tag")
-local ErrorHandler = require("core/utils/error_handler")
+local Context = require("core.context")
+local Favorite = require("core.favorite")
+local MapTag = require("core.map_tag")
+local ErrorHandler = require("core.utils.error_handler")
 local Storage = require("core.storage")
 local Helpers = require("core.utils.helpers")
 
@@ -64,7 +64,7 @@ function FaveBarGUI.update_slots(player)
   local slots = Helpers.get_surface_favorites_array(favorites, Constants.MAX_FAVORITE_SLOTS)
   for slot, fav in ipairs(slots) do
     -- Use fav.surface_index, fav.gps, fav.map_tag, fav.slot_locked
-    -- Example: display slot as empty if Helpers.favorite_slot_is_empty(fav)
+    -- Example: display slot as empty 
     -- TODO: Implement actual GUI update logic using new structure
   end
 end

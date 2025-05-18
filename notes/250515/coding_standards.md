@@ -31,3 +31,7 @@
 ---
 
 See also: `architecture.md`, `data_schema.md`, `error_handling.md`.
+
+### Misc
+- Always put require statements at the top of the file
+- Use dot notation for require statement paths

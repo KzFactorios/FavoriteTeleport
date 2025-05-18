@@ -5,7 +5,8 @@
 --- @field getPlayerSettings fun(self: Settings, player: LuaPlayer): table
 local Settings = {}
 
-local Constants = require("Constants")
+local Constants = require("constants")
+local Context = require("core.context")
 
 --- Returns a table of per-player mod settings, with defaults if not set
 -- @param player LuaPlayer|nil

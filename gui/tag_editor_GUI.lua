@@ -1,18 +1,13 @@
 --- tag_editor_GUI.lua
 --- Handles the tag editor dialog for FavoriteTeleport mod
 
---[[
-  Static analysis suppressions:
-  Some if-statements in this file are flagged as 'impossible' or 'unnecessary' by static analysis tools.
-  These are required for runtime correctness in Factorio multiplayer and migration scenarios.
-  See comments above each such block for details.
-]]
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
-local TagEditorGUIBuilder = require("gui/tag_editor_GUI_builder")
-local TagEditorGUIValidation = require("gui/tag_editor_GUI_validation")
-local TagEditorGUIEvents = require("gui/tag_editor_GUI_events")
+local TagEditorGUIBuilder = require("gui.tag_editor_GUI_builder")
+local TagEditorGUIValidation = require("gui.tag_editor_GUI_validation")
+local TagEditorGUIEvents = require("gui.tag_editor_GUI_events")
+local MapTag = require("core.map_tag")
 
 local TagEditorGUI = {}
 TagEditorGUI.current_position = nil -- Stores the current MapPosition for the open tag editor
@@ -46,7 +41,13 @@ function TagEditorGUI.handle_confirm(player)
   if map_position == nil then return end
 
   -- Fallback to GPS string from GUI if needed
-  local gps = Helpers.format_gps(map_position.x, map_position.y, player.surface.index)
+  local gps = Helpers.map_position_to_gps(map_position, player.surface.index)
+
+  -- If a chart_tag is found for the clicked location, use its position to set the GPS for the editor
+  local found_chart_tag = Storage.find_chart_tag_by_gps(player, gps)
+  if found_chart_tag and found_chart_tag.position then
+    gps = Helpers.map_position_to_gps(found_chart_tag.position, player.surface.index)
+  end
 
   -- Gather input values
   -- TODO add surface data to gps
@@ -103,17 +104,37 @@ function TagEditorGUI.handle_confirm(player)
 
   -- MapTag creation/update
   local map_tags = Storage.get_map_tags(player)
-  local map_tag = Storage.find_map_tag_by_gps(gps)
+  local map_tag = Storage.find_map_tag_by_gps(player, gps)
+  -- If not found, try to match by position (for legacy or mismatched GPS)
   if not map_tag then
-    map_tag = {
-      gps = gps,
-      faved_by_players = {},
-      description = description
-    }
-    table.insert(map_tags, map_tag)
+    for _, mt in ipairs(map_tags) do
+      local pos = Helpers.gps_to_map_position(mt.gps)
+      if pos and pos.x == map_position.x and pos.y == map_position.y then
+        map_tag = mt
+        break
+      end
+    end
+  end
+  if not map_tag then
+    map_tag = MapTag.new(player, map_position, chart_tag, is_favorite, description)
+    if map_tag then
+      -- Always ensure faved_by_players is an array
+      if not map_tag.faved_by_players or type(map_tag.faved_by_players) ~= "table" then
+        map_tag.faved_by_players = {}
+      end
+      local is_in_array = false
+      for _, idx in ipairs(map_tag.faved_by_players) do
+        if idx == player_index then is_in_array = true; break end
+      end
+      if is_favorite and not is_in_array then
+        table.insert(map_tag.faved_by_players, player_index)
+      end
+    end
   else -- update the existing map_tag
     map_tag.gps = gps
-    -- if is favorite and the player's index is not in the array...
+    if not map_tag.faved_by_players or type(map_tag.faved_by_players) ~= "table" then
+      map_tag.faved_by_players = {}
+    end
     local is_in_array, idx_slot = Helpers.index_is_in_table(map_tag.faved_by_players, player.index)
     if is_favorite and not is_in_array then
       table.insert(map_tag.faved_by_players, player_index)
@@ -121,6 +142,12 @@ function TagEditorGUI.handle_confirm(player)
       table.remove(map_tag.faved_by_players, idx_slot)
     end
     map_tag.description = description
+  end
+  if map_tag then
+    -- Remove any runtime object references before storing
+    if map_tag.tag then map_tag.tag = nil end
+    -- Only store serializable fields (gps, faved_by_players, created_by, text, description, etc)
+    Storage.add_or_update_map_tag(player, map_tag)
   end
 
   -- Favorite logic
@@ -134,7 +161,7 @@ function TagEditorGUI.handle_confirm(player)
   -- if not, make sure that there is no favorite for that location
   if not existing_favorite then
     if is_favorite then -- Required for runtime: GUI state can change
-      slot = TagEditorGUI.get_next_available_favorite_slot(player)
+      slot = Storage.get_next_available_favorite_slot(player)
       if not slot then
         is_favorite = false
       else
@@ -255,5 +282,38 @@ function TagEditorGUI.update_save_btn(player)
     save_btn.tooltip = { "ft_tag_editor_save_tooltip" }
   end
 end
+
+-- Helper: returns true if the element is inside the tag editor frame
+local function is_inside_tag_editor(element)
+  while element do
+    if element.name == "ft_tag_editor_outer_frame" then
+      return true
+    end
+    element = element.parent
+  end
+  return false
+end
+
+-- Patch: ignore clicks outside tag editor when open
+function TagEditorGUI.on_click(event)
+  local player_index = Helpers.find_player_index_in_event(event)
+  if not player_index then return end
+  local player = _G.game.get_player(player_index)
+  if not player then return end
+  local gui = player.gui.screen
+  if gui.ft_tag_editor_outer_frame then
+    local element = event.element
+    if not element or not element.valid then return end
+    if not is_inside_tag_editor(element) and element.name ~= "ft_tag_editor_outer_frame" then
+      -- Click was outside the tag editor, ignore
+      return
+    end
+  end
+  -- ...existing code...
+end
+
+-- When the tag editor is open, ignore clicks outside the tag editor GUI
+-- NOTE: The script.on_event registration must be done in control.lua, not here.
+-- Please register TagEditorGUI.on_click for defines.events.on_gui_click in control.lua.
 
 return TagEditorGUI

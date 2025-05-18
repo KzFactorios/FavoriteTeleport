@@ -24,7 +24,8 @@ constants.events = {
 }
 
 constants.settings = {
-  FAVORITES_ON = PRE .. "favorites_on"
+  FAVORITES_ON = PRE .. "favorites_on",
+  BOUNDING_BOX_TOLERANCE = 4
 }
 
 return constants

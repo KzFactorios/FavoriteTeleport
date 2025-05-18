@@ -1,7 +1,36 @@
 -- storage_viewer_GUI.lua
 -- Advanced tree view GUI for displaying the FavoriteTeleport storage object
 
+-- Helper to check if a value is a LuaCustomChartTag (best effort)
+local function is_lua_custom_chart_tag(val)
+  return type(val) == "table"
+    and val.valid ~= nil
+    and val.tag_number ~= nil
+    and val.position ~= nil
+    and val.text ~= nil
+end
+
 local StorageViewerGUI = {}
+
+-- Helper to serialize LuaCustomChartTag for display
+local function serialize_chart_tag(tag)
+  if not tag or type(tag) ~= "table" or not tag.valid then
+    return { _type = "LuaCustomChartTag", valid = false }
+  end
+  local icon_str = tag.icon and (tag.icon.type .. ":" .. tag.icon.name) or "nil"
+  return {
+    _type = "LuaCustomChartTag",
+    position = tag.position and ("{" .. tag.position.x .. ", " .. tag.position.y .. "}") or "nil",
+    text = tag.text or "",
+    icon = icon_str,
+    last_user = tag.last_user and tag.last_user.name or tostring(tag.last_user),
+    tag_number = tag.tag_number,
+    surface = tag.surface and tag.surface.name or "nil",
+    force = tag.force and tag.force.name or "nil",
+    valid = tag.valid
+  }
+end
+
 local GUI_NAME = "ft_storage_viewer_frame"
 local SCROLL_NAME = "ft_storage_viewer_scroll"
 local CLOSE_BTN_NAME = "ft_storage_viewer_close_btn"
@@ -17,13 +46,29 @@ local function add_table_tree(parent, data, depth, expand_state, path)
     parent.add{type="label", caption=tostring(data)}
     return
   end
+  -- Special handling for LuaCustomChartTag
+  if is_lua_custom_chart_tag(data) then
+    data = serialize_chart_tag(data)
+  end
   for k, v in pairs(data) do
     local node_path = path .. "." .. tostring(k)
     local is_table = type(v) == "table"
+    -- Special handling for LuaCustomChartTag values
+    if is_table and is_lua_custom_chart_tag(v) then
+      local serialized = serialize_chart_tag(v)
+      -- Instead of replacing v (which may be used in the next branch), display the serialized fields inline
+      for field, value in pairs(serialized) do
+        local sub_flow = parent.add{type="flow", direction="horizontal"}
+        sub_flow.add{type="empty-widget", style="draggable_space_header"}
+        sub_flow.add{type="label", caption=("%s%s:"):format(string.rep("  ", depth+1), tostring(field))}
+        sub_flow.add{type="label", caption=tostring(value)}
+      end
+      goto continue
+    end
     local flow = parent.add{type="flow", direction="horizontal"}
     if is_table then
       local expanded = expand_state[node_path] ~= false
-local btn = flow.add{
+      local btn = flow.add{
         type = "button",
         name = "ft_storage_viewer_toggle_" .. node_path,
         caption = expanded and "–" or "+",
@@ -39,6 +84,7 @@ local btn = flow.add{
       flow.add{type="label", caption=("%s%s:"):format(string.rep("  ", depth), tostring(k))}
       flow.add{type="label", caption=tostring(v)}
     end
+    ::continue::
   end
 end
 

@@ -33,12 +33,32 @@ local GUICommands = {
   end
 }
 
+-- Helper: returns true if the element is inside the tag editor frame
+local function is_inside_tag_editor(element)
+  while element do
+    if element.name == "ft_tag_editor_outer_frame" then
+      return true
+    end
+    element = element.parent
+  end
+  return false
+end
+
+-- Patch: ignore clicks outside tag editor when open
+local old_on_click = TagEditorGUIEvents.on_click
 function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
   local TagEditorGUI = TagEditorGUIParam or TagEditorGUI
   if not TagEditorGUI then
     error("TagEditorGUI must be passed to on_click as a parameter to avoid circular require.")
   end
   if not event or not event.element or not event.element.valid then return end
+  local gui_player = player or (event.player_index and _G and _G.game and _G.game.get_player and _G.game.get_player(event.player_index))
+  if gui_player and gui_player.gui and gui_player.gui.screen and gui_player.gui.screen.ft_tag_editor_outer_frame then
+    if not is_inside_tag_editor(event.element) and event.element.name ~= "ft_tag_editor_outer_frame" then
+      -- Click was outside the tag editor, ignore
+      return
+    end
+  end
   local name = event.element.name
   if name == "ft_tag_editor_x_btn" or name == "ft_tag_editor_close_btn" then
     return GUICommands.close(event, TagEditorGUI, player)

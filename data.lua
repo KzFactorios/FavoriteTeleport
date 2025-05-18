@@ -1,7 +1,7 @@
 require("prototypes/styles")
 
 local Constants = require("constants")
-local PREFIX = Constants.PREFIX
+local Context = require("core.context")
 
 ---@diagnostic disable-next-line: undefined-global
 data:extend {

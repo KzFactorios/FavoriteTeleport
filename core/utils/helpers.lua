@@ -39,11 +39,8 @@ end
 -- @param surface_index integer|string
 -- @return string
 function Helpers.map_position_to_gps(map_pos, surface_index)
-  if not map_pos then
-    -- Log or handle the nil map_pos case here if needed
-    return nil
-  end
-  return Helpers.format_gps(map_pos.x, map_pos.y, surface_index)
+  if not map_pos then return nil end
+  return Helpers.format_gps(math.floor(map_pos.x), math.floor(map_pos.y), surface_index)
 end
 
 --- Converts a gps string to a MapPosition. Format: "xxx.yyy.surface_index" (surface_index is ignored here)
@@ -78,16 +75,7 @@ function Helpers.get_surface_index_from_gps(gps)
   return surface_index
 end
 
--- Defensive: iterate event table to find player_index
-function Helpers.find_player_index_in_event(event)
-  for k, v in pairs(event) do
-    if tostring(k) == "player_index" then
-      return v
-    end
-  end
-  return nil
-end
-
+--- when you want to find a uint in an array of uints
 function Helpers.index_is_in_table(_table, idx)
   if type(_table) == "table" then
     for x, v in pairs(_table) do
@@ -99,7 +87,7 @@ function Helpers.index_is_in_table(_table, idx)
   return false, -1
 end
 
--- Returns a new array with slot_num set and sorted by index order
+--- Returns a new array with slot_num set and sorted by index order
 function Helpers.array_sort_by_index(array)
   local arr = {}
   for i, item in ipairs(array) do
@@ -128,13 +116,6 @@ end
 function Helpers.table_is_empty(tbl)
   if type(tbl) ~= "table" then return true end
   return next(tbl) == nil
-end
-
---- Returns true if the favorite slot is empty (no gps and no map_tag)
--- @param fav table
--- @return boolean
-function Helpers.favorite_slot_is_empty(fav)
-  return not fav or (fav.map_tag == nil or fav.map_tag == {})
 end
 
 --- Finds a favorite by gps in a surface's favorites array
@@ -189,5 +170,3 @@ function Helpers.find_by_predicate(_table, predicate)
   end
   return nil, nil
 end
-
-return Helpers

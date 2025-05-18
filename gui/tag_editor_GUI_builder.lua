@@ -22,8 +22,9 @@ local function add_row(parent, name, label_caption, label_style, element_def, op
   return row, label, element
 end
 
+--[[ Old version - no debugging
 function TagEditorGUIBuilderClass:new(player, position, context)
-  local gps = Helpers.format_gps(position.x, position.y, player.surface.index)
+  
   local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
   local map_tag = Storage.find_map_tag_by_gps(player, gps)
 
@@ -48,6 +49,43 @@ function TagEditorGUIBuilderClass:new(player, position, context)
     player = player,
     position = position,
     is_favorite = map_tag.is_favorite,
+    context = context,
+    gui = player.gui.screen,
+    outer_frame = nil,
+    content_frame = nil,
+    gps = gps,
+    chart_tag = chart_tag,
+    map_tag = map_tag
+  }
+  setmetatable(o, self)
+  return o
+end
+]]
+
+
+function TagEditorGUIBuilderClass:new(player, position, context)
+  if not player or not position then
+    return
+  end
+
+  local gps = Helpers.map_position_to_gps(position, player.surface.index)
+  if not gps then
+    return
+  end
+
+  local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
+  -- Do NOT create a chart tag here! Only look up existing.
+
+  local map_tag = Storage.find_map_tag_by_gps(player, gps)
+  -- Only proceed if map_tag exists (do not attempt to create a new one here)
+  if not map_tag then
+    return
+  end
+
+  local o = {
+    player = player,
+    position = position,
+    is_favorite = false, -- No is_favorite field, set to false for GUI
     context = context,
     gui = player.gui.screen,
     outer_frame = nil,
@@ -235,27 +273,25 @@ function TagEditorGUIBuilderClass:build_content_frame()
     })
 
   --local max_slots = Constants.MAX_FAVORITE_SLOTS
-  local available_slots = Storage.get_available_favorite_slots(self.player)
-  local favorite_enabled = #available_slots > 0
+  local available_slots = Storage.get_available_favorite_slots_count(self.player)
+  local is_already_favorite = false -- No is_favorite field, so always false
+  local favorite_enabled = (available_slots > 0) or is_already_favorite
 
   add_row(content_frame, "ft_tag_editor_favorite_row", { "ft_tag_editor_favorite_label" },
     "te_tr_favorite_label", {
       type = "sprite-button",
       name = "ft_tag_editor_favorite_btn",
-      sprite = (self.is_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
+      sprite = (is_already_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
       tooltip = { "ft_tag_editor_favorite_tooltip" },
       style = "ft_favorite_button",
       enabled = favorite_enabled
     }, { top_margin = 8 })
-  if not favorite_enabled then
-    self.is_favorite = false
-  end
 
   add_row(content_frame, "ft_tag_editor_icon_row", { "ft_tag_editor_icon" }, "te_tr_icon_label", {
     type = "choose-elem-button",
     name = "tag-editor-icon",
     elem_type = "signal",
-    signal = self.chart_tag.icon,
+    signal = self.chart_tag and self.chart_tag.icon or nil,
     tooltip = { "ft_tag_editor_icon_tooltip" },
     style = "ft_icon_picker_button"
   }, { top_margin = 8 })
@@ -263,7 +299,7 @@ function TagEditorGUIBuilderClass:build_content_frame()
   add_row(content_frame, "ft_tag_editor_text_row", { "ft_tag_editor_text" }, "te_tr_text_label", {
     type = "textfield",
     name = "ft_tag_editor_textbox",
-    text = self.chart_tag.text or "",
+    text = self.chart_tag and self.chart_tag.text or "",
     clear_and_focus_on_right_click = true,
     tooltip = { "ft_tag_editor_text_tooltip" },
     style = "ft_textfield"
@@ -272,7 +308,7 @@ function TagEditorGUIBuilderClass:build_content_frame()
   add_row(content_frame, "ft_tag_editor_desc_row", { "ft_tag_editor_desc" }, "te_tr_desc_label", {
     type = "textfield",
     name = "ft_tag_editor_descbox",
-    text = self.map_tag.description or "",
+    text = self.map_tag and self.map_tag.description or "",
     clear_and_focus_on_right_click = true,
     tooltip = { "ft_tag_editor_desc_tooltip" },
     numeric = false,
@@ -324,9 +360,6 @@ function TagEditorGUIBuilder.open(player, position, context, tag_editor_gui_modu
   -- Safe: Only update the save button state if update_save_btn does NOT trigger a GUI rebuild
   if tag_editor_gui_module and type(tag_editor_gui_module.update_save_btn) == "function" then
     local ok, err = pcall(tag_editor_gui_module.update_save_btn, player)
-    if not ok and _G.log then
-      _G.log("[FavoriteTeleport] Error in update_save_btn: " .. tostring(err))
-    end
   end
 end
 

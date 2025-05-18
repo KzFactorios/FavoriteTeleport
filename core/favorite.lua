@@ -5,6 +5,7 @@
 local Favorite = {}
 
 local Storage = require("core.storage")
+local Helpers = require("core.utils.helpers")
 
 --- Creates a new Favorite instance for a given surface
 -- @param surface_index uint The surface index
