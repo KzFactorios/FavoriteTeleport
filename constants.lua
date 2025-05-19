@@ -12,7 +12,7 @@ constants.TELEPORT_RADIUS_MAX = 64
 constants.MAX_FAVORITE_SLOTS = 10
 
 constants.events = {
-  --ADD_TAG_INPUT = PRE .. "add-tag-input",
+  ADD_TAG_INPUT = "add-tag-input",
   --TELEPORT_INPUT = PRE .. "teleport-input",
   --CLOSE_WITH_TOGGLE_MAP = PRE .. "close-with-toggle-map",
   --OPEN_STOCK_GUI = PRE .. "open-stock-gui",
@@ -25,7 +25,8 @@ constants.events = {
 
 constants.settings = {
   FAVORITES_ON = PRE .. "favorites_on",
-  BOUNDING_BOX_TOLERANCE = 4
+  BOUNDING_BOX_TOLERANCE = 10,
+  SNAP_SCALE_FOR_CLICKED_TAG = 4
 }
 
 return constants

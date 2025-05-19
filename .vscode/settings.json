@@ -17,7 +17,6 @@
         "data",
         "defines"
     ],
-    "editor.definitionLinkOpensInPeek": false,
     "editor.gotoLocation.multipleDefinitions": "goto", // Jumps directly to the first definition
     "editor.gotoLocation.multipleDeclarations": "goto",
     "editor.gotoLocation.multipleImplementations": "goto",

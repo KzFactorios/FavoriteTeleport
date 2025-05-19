@@ -45,14 +45,12 @@ end
 
 -- Register a custom input for right-click in chart view to open the tag editor
 script.on_event(Constants.events.ON_OPEN_TAG_EDITOR, function(event)
-  game.print("ON_OPEN_TAG_EDITOR event fired") -- TEMP DEBUG
+  -- game.print("ON_OPEN_TAG_EDITOR event fired") -- TEMP DEBUG
   local player = get_event_player(event)
   if not player then return end
 
   -- Ignore right-clicks in render_mode.game or render_mode.chart_zoomed_in
-  if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
-    return
-  end
+  if not Storage.player_in_chart_view then return end
 
   -- Use event.cursor_position if available, otherwise fallback to player.position
   ---@diagnostic disable-next-line: undefined-field
@@ -211,10 +209,12 @@ end
 script.on_event(defines.events.on_gui_click, function(event)
   local player = get_event_player(event)
   if not player then return end
+
   if event.element.name == "ft_storage_viewer_close_btn" then
     StorageViewerGUI.close(player)
     return
   end
+
   if event.element.name:find("^ft_storage_viewer_toggle_") then
     local path = event.element.name:gsub("^ft_storage_viewer_toggle_", "")
     local expand_state = update_storage_viewer_expand_state(player, path)
@@ -230,16 +230,6 @@ script.on_event(defines.events.on_gui_click, function(event)
     return
   end
 end)
-
--- Helper: robustly find a child element by name in a parent (searches .children if direct lookup fails)
-local function find_child_by_name(parent, name)
-  if not parent or not name then return nil end
-  if parent[name] then return parent[name] end
-  for _, child in pairs(parent.children or {}) do
-    if child.name == name then return child end
-  end
-  return nil
-end
 
 -- Tag Editor GUI: Enable/disable save button based on text or icon
 script.on_event(defines.events.on_gui_text_changed, function(event)

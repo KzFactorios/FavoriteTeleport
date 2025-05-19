@@ -1,11 +1,11 @@
 --- @class MapTag
 --- Represents a map tag object for FavoriteTeleport mod
 --- @field gps string The position string (e.g., "000.-1350")
---- @field tag LuaCustomChartTag|nil The underlying Factorio chart tag object
+--- @field chart_tag LuaCustomChartTag|nil The underlying Factorio chart tag object
 --- @field created_by string The player index who created the tag
 --- @field description string|nil Additional text for the tag
 --- @field faved_by_players uint[]
---- @field is_player_favorite fun(self.MapTag, player: LuaPlayer): boolean
+--- @field is_player_favorite fun(self: MapTag, player: LuaPlayer): boolean
 --- @field get_text fun(self: MapTag): string|nil The text for the tag
 --- @field is_tag_valid fun(self: MapTag):boolean
 --- @field new fun(player: LuaPlayer, position: MapPosition, chart_tag:LuaCustomChartTag, is_favorite:boolean, description: string): MapTag|nil
@@ -28,60 +28,48 @@ local Storage = require("core.storage")
 function MapTag.new(player, position, chart_tag, is_favorite, description)
   if not player then return nil end
 
+  -- Validate position: do not allow {x=0, y=0} unless explicitly intended
+  if type(position) ~= "table" or type(position.x) ~= "number" or type(position.y) ~= "number" then
+    return nil
+  end
+  --[[if position.x == 0 and position.y == 0 then
+    -- Only allow {0,0} if explicitly allowed via description or context (customize as needed)
+    if not (description and description:find("allow_zero_position")) then
+      return nil
+    end
+  end]]
+
   local surface_index = player.surface.index
   local gps = Helpers.map_position_to_gps(position, surface_index)
 
-  -- Only create a chart_tag if one is provided; do not create by default
-  -- This prevents chart_tag creation on right-click before tag editor confirm
-  -- if not chart_tag then
-  --   local chart_tag_spec = {
-  --     position = Helpers.gps_to_map_position(gps),
-  --     icon = nil,
-  --     text = "",
-  --     last_user = player.name
-  --   }
-  --   chart_tag = player.force.add_chart_tag(player.surface, chart_tag_spec)
-  --   if not chart_tag then return nil end
-  -- end
-
   local faved_by_players
-  ---@diagnostic disable-next-line: assign-type-mismatch
   if is_favorite then
     faved_by_players = { player.index }
   end
 
   local obj = {
     gps = gps,
-    tag = chart_tag, -- can be nil
+    chart_tag = chart_tag, -- can be nil
     faved_by_players = faved_by_players or {},
     description = description,
     created_by = player.name, -- Always use player.name for created_by (not index)
   }
 
-  -- Remove any runtime object references before storing
-  if obj.tag then obj.tag = nil end
-  for k, v in pairs(obj) do
-    if type(v) == "table" and v.__self then
-      obj[k] = nil
-    end
-  end
-
   setmetatable(obj, { __index = MapTag })
-
-  ---@diagnostic disable-next-line: return-type-mismatch
+  ---@cast obj MapTag
   return obj
 end
 
-function MapTag:is_player_favorite(player)
-  local is_in, _ Helpers.index_is_in_table(self.faved_by_players, player.index)
-  return is_in
+function MapTag.is_player_favorite(self, player)
+  if not self or not self.faved_by_players then return false end
+  for _, idx in ipairs(self.faved_by_players) do
+    if idx == player.index then return true end
+  end
+  return false
 end
 
---- Checks if the underlying map tag is valid
--- @param self MapTag
--- @return string | nil
-function MapTag:is_tag_valid()
-  return self.tag ~= nil and self.tag.valid == true
+function MapTag.is_tag_valid(self)
+  return self.chart_tag ~= nil and self.chart_tag.valid == true
 end
 
 -- handle changes from the stock tag editor

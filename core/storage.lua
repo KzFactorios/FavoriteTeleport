@@ -1,4 +1,3 @@
-local Storage = require("core.storage")
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
 
@@ -136,7 +135,7 @@ function Storage.find_chart_tag_by_gps(player, gps)
   local target_pos = Helpers.gps_to_map_position(gps)
   if not target_pos then return nil end
   for _, chart_tag in ipairs(chart_tags) do
-    if chart_tag.position then
+    if chart_tag.valid and chart_tag.position then
       local dx = math.abs(chart_tag.position.x - target_pos.x)
       local dy = math.abs(chart_tag.position.y - target_pos.y)
       if dx <= Constants.settings.BOUNDING_BOX_TOLERANCE and dy <= Constants.settings.BOUNDING_BOX_TOLERANCE then
@@ -174,6 +173,12 @@ end
       surfaces = {
         [surface_index] = {
           favorites = { ]]
+
+function Storage.player_in_chart_view(player)
+  if not player then return false end
+  return Storage.get_player_data(player).render_mode == _G.defines.render_mode.chart
+end
+
 function Storage.get_ALL_player_favorites(player)
   if not player or not player.valid then return {} end
   local pdata = Storage.get_player_data(player)
@@ -245,7 +250,7 @@ function Storage.favorite_slot_is_empty(player, slot)
   if not favorites[slot] then
     return true
   end
----@diagnostic disable-next-line: need-check-nil
+  ---@diagnostic disable-next-line: need-check-nil
   return not favorites[slot].map_tag or favorites[slot].map_tag == {}
 end
 
@@ -261,7 +266,7 @@ function Storage.get_available_favorite_slots_count(player)
   local max_slots = Constants.MAX_FAVORITE_SLOTS
   local count = 0
   for i = 1, max_slots do
----@diagnostic disable-next-line: need-check-nil
+    ---@diagnostic disable-next-line: need-check-nil
     if not favorites[i] or not favorites[i].map_tag and favorites[i].map_tag ~= {} then
       count = count + 1
     end
@@ -356,6 +361,117 @@ function Storage.populate_all_chart_tags(game)
     end
     surface_data.chart_tags = chart_tags
   end
+end
+
+-- Destroys a chart_tag from the game/force and removes it from storage if successful
+-- @param player LuaPlayer
+-- @param gps string (gps string for the tag)
+-- @return boolean true if destroyed, false otherwise
+function Storage.destroy_chart_tag(player, gps)
+  if not player or not gps then return false end
+  local surface = player.surface
+  local surface_index = surface.index
+  local storage = Storage.get()
+  local surface_data = storage.surfaces and storage.surfaces[surface_index]
+  if not surface_data or not surface_data.chart_tags then return false end
+
+  -- Find the chart_tag in storage
+  local chart_tags = surface_data.chart_tags
+  for idx, tag in pairs(chart_tags) do
+    if tag and tag.gps == gps then
+      -- Look up the runtime chart tag using the position
+      local pos = tag.position or (tag.chart_tag and tag.chart_tag.position)
+      if pos then
+        local tags = player.force.find_chart_tags(surface, { left_top = pos, right_bottom = pos })
+        for _, runtime_tag in pairs(tags) do
+          if runtime_tag.position.x == pos.x and runtime_tag.position.y == pos.y then
+            pcall(function() runtime_tag.destroy() end)
+            break
+          end
+        end
+      end
+      -- Remove from storage
+      chart_tags[idx] = nil
+      return true
+    end
+  end
+  return false
+end
+
+-- Rehomes a chart_tag to a new GPS if needed
+-- @param player LuaPlayer
+-- @param chart_tag LuaCustomChartTag (runtime object)
+-- @param gps string (target GPS string)
+-- @return LuaCustomChartTag (the new or original chart tag)
+function Storage.rehome_chart_tag(player, chart_tag, gps)
+  if not player or not chart_tag or not gps then return chart_tag end
+  local surface = player.surface
+  local surface_index = surface.index
+  local gps_from_chart_tag = Helpers.format_gps(chart_tag.position.x, chart_tag.position.y, surface_index)
+  if gps_from_chart_tag == gps then
+    return chart_tag
+  end
+
+  -- find any matching map_tags/favorites that have this chart_tag
+  local matching_favorites = {}
+  local found_map_tag = Storage.find_map_tag_by_gps(gps)
+
+  if found_map_tag then
+    for _, players in pairs(_G.game.players) do
+      for _, favorite in pairs(Storage.get_player_favorites(player)) do
+        if favorite.gps == gps then
+          table.insert(matching_favorites, favorite)
+        end
+      end
+    end
+  end
+
+  -- Create new chart tag at the new GPS position
+  local new_pos = Helpers.gps_to_map_position(gps)
+  if not new_pos then return chart_tag end
+
+  local tag_spec = {
+    position = new_pos,
+    icon = chart_tag.icon,
+    text = chart_tag.text,
+    last_user = chart_tag.last_user,
+    -- Add any other fields you want to copy
+  }
+  local new_chart_tag = player.force.add_chart_tag(surface, tag_spec)
+
+  if new_chart_tag then
+    local update_gps = 
+    Helpers.format_gps(new_chart_tag.position.x, new_chart_tag.position.y, player.surface.index)
+    for _, favorite in pairs(matching_favorites) do
+      favorite.gps = update_gps
+    end
+
+    if found_map_tag then
+      found_map_tag.gps = update_gps
+      found_map_tag.chart_tag = new_chart_tag
+    end
+    -- Destroy the old chart tag
+    pcall(function() chart_tag.destroy() end)
+  end
+
+  return new_chart_tag or chart_tag
+
+end
+
+-- In core/storage.lua, add per-player tag editor position storage
+local tag_editor_positions = {}
+
+function Storage.set_tag_editor_position(player, position)
+  -- Assumes player and player.index are always valid
+  tag_editor_positions[player.index] = position
+end
+
+function Storage.get_tag_editor_position(player)
+  return tag_editor_positions[player.index]
+end
+
+function Storage.clear_tag_editor_position(player)
+  tag_editor_positions[player.index] = nil
 end
 
 return Storage

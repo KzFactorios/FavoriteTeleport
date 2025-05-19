@@ -7,178 +7,224 @@ local Storage = require("core.storage")
 local TagEditorGUIBuilder = require("gui.tag_editor_GUI_builder")
 local TagEditorGUIValidation = require("gui.tag_editor_GUI_validation")
 local TagEditorGUIEvents = require("gui.tag_editor_GUI_events")
+local GuiBase = require("gui.gui_base")
 local MapTag = require("core.map_tag")
 
 local TagEditorGUI = {}
 TagEditorGUI.current_position = nil -- Stores the current MapPosition for the open tag editor
 
 TagEditorGUI.open = function(player, position, context)
-  TagEditorGUI.current_position = position
+  if Storage.set_tag_editor_position then
+    Storage.set_tag_editor_position(player, position)
+  end
   return TagEditorGUIBuilder.open(player, position, context, TagEditorGUI)
 end
 
+TagEditorGUI.get_current_position = function(player)
+  if Storage.get_tag_editor_position then
+    return Storage.get_tag_editor_position(player)
+  end
+  return nil
+end
+
 TagEditorGUI.close = function(player)
-  TagEditorGUI.current_position = nil
+  if Storage.clear_tag_editor_position then
+    Storage.clear_tag_editor_position(player)
+  end
   return TagEditorGUIBuilder.close(player)
 end
 
 TagEditorGUI.add_row = TagEditorGUIBuilder.add_row
 TagEditorGUI.on_click = TagEditorGUIEvents.on_click
 
---- Handles the confirm/save action for the tag editor GUI
--- @param player LuaPlayer
-function TagEditorGUI.handle_confirm(player)
-  local gui = player.gui.screen
-  local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
-  if not frame then return end
-
-  local surface = player.surface
-  local surface_index = surface.index
-  local player_index = player.index
-
-  -- Use the tracked MapPosition if available
-  local map_position = TagEditorGUI.current_position
-  if map_position == nil then return end
-
-  -- Fallback to GPS string from GUI if needed
-  local gps = Helpers.map_position_to_gps(map_position, player.surface.index)
-
-  -- If a chart_tag is found for the clicked location, use its position to set the GPS for the editor
-  local found_chart_tag = Storage.find_chart_tag_by_gps(player, gps)
-  if found_chart_tag and found_chart_tag.position then
-    gps = Helpers.map_position_to_gps(found_chart_tag.position, player.surface.index)
-  end
-
-  -- Gather input values
-  -- TODO add surface data to gps
+--- Extracts icon, text, description, and favorite state from the tag editor GUI
+-- @param frame LuaGuiElement (ft_tag_editor_frame)
+-- @return table {icon, text, description, is_favorite, favorite_btn, icon_picker, text_box, desc_box}
+function TagEditorGUI.get_gui_input(frame, player)
   local content_frame = frame.ft_tag_editor_content_frame
-  local icon_picker = content_frame and content_frame.ft_tag_editor_icon_row and
-      content_frame.ft_tag_editor_icon_row["tag-editor-icon"]
-  local icon = icon_picker and icon_picker.elem_value
-  local text_box = content_frame and content_frame.ft_tag_editor_text_row and
-      content_frame.ft_tag_editor_text_row.ft_tag_editor_textbox
-  local desc_box = content_frame and content_frame.ft_tag_editor_desc_row and
-      content_frame.ft_tag_editor_desc_row.ft_tag_editor_descbox
+  local icon_picker = GuiBase.find_by_path(content_frame, {"ft_tag_editor_icon_row", "tag-editor-icon"})
+  local favorite_btn = GuiBase.find_by_path(content_frame, {"ft_tag_editor_favorite_row", "ft_tag_editor_favorite_btn"})
+  local text_box = GuiBase.find_by_path(content_frame, {"ft_tag_editor_text_row", "ft_tag_editor_textbox"})
+  local desc_box = GuiBase.find_by_path(content_frame, {"ft_tag_editor_desc_row", "ft_tag_editor_descbox"})
+  local icon = icon_picker and icon_picker.elem_value or nil
   local text = text_box and (text_box.text or ""):gsub("^%s*(.-)%s*$", "%1") or ""
   local description = desc_box and (desc_box.text or ""):gsub("^%s*(.-)%s*$", "%1") or ""
-  local favorite_btn = content_frame and content_frame.ft_tag_editor_favorite_row and
-      content_frame.ft_tag_editor_favorite_row.ft_tag_editor_favorite_btn
-  local is_favorite = favorite_btn and favorite_btn.sprite and favorite_btn.sprite ~= "" or false
+  local is_favorite = (favorite_btn and favorite_btn.sprite and favorite_btn.sprite ~= "")
+  return {
+    icon = icon,
+    text = text,
+    description = description,
+    is_favorite = is_favorite,
+    favorite_btn = favorite_btn,
+    icon_picker = icon_picker,
+    text_box = text_box,
+    desc_box = desc_box
+  }
+end
 
-  -- Validation
-  if not TagEditorGUIValidation.validate_inputs(icon, text, description, player) then
-    return
-  end
-
-  -- Find or create chart_tag
-  local chart_tags = Storage.get_chart_tags(player)
-  if not chart_tags then return nil end
-  local found_tag = Storage.find_chart_tag_by_gps(player, gps)
-  local chart_tag
-  if not found_tag then
-    -- Create new chart tag
+--- Finds or creates a chart tag for the given gps and input, updating if needed
+-- @param player LuaPlayer
+-- @param gps string
+-- @param input table (from get_gui_input)
+-- @return chart_tag (LuaCustomChartTag)
+function TagEditorGUI.find_create_chart_tag_on_confirm(player, gps, input)
+  local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
+  if not chart_tag then
     local tag_spec = {
       position = Helpers.gps_to_map_position(gps),
-      icon = icon,
-      text = text,
+      icon = input.icon or {},
+      text = input.text,
       last_user = player.name
     }
     chart_tag = player.force.add_chart_tag(player.surface, tag_spec)
     if not chart_tag then
       player.print { "FavoriteTeleport.ft_tag_editor_error_chart_tag_failed" }
-      TagEditorGUI.close(player)
-      return
+      return nil
     end
-    --table.insert(chart_tags, chart_tag)
-  else
-    chart_tag = found_tag
-    if chart_tag.last_user == player.name then
-      chart_tag.icon = icon
-      chart_tag.text = text
-      chart_tag.last_user = player.name
-    end
-    -- Storage.reset_chart_tags(player) -- Invalidate cache
+  elseif chart_tag.last_user == player.name then
+    chart_tag.icon = input.icon or {}
+    chart_tag.text = input.text
+    chart_tag.last_user = player.name
   end
+  Storage.reset_chart_tags(player)
+  return Storage.find_chart_tag_by_gps(player, gps)
+end
 
-  Storage.reset_chart_tags(player) -- Invalidate cache
-
-  -- MapTag creation/update
-  local map_tags = Storage.get_map_tags(player)
+--- Finds or creates a map tag for the given gps and input, updating if needed
+-- @param player LuaPlayer
+-- @param gps string
+-- @param chart_tag LuaCustomChartTag
+-- @param input table (from get_gui_input)
+-- @return map_tag (MapTag)
+function TagEditorGUI.find_create_map_tag_on_confirm(player, gps, chart_tag, input)
   local map_tag = Storage.find_map_tag_by_gps(player, gps)
-  -- If not found, try to match by position (for legacy or mismatched GPS)
+  local is_favorite = not not input.is_favorite
+  local safe_chart_tag = chart_tag or player.force.add_chart_tag(player.surface, { position = Helpers.simplify_position(TagEditorGUI.current_position), icon = {}, text = "", last_user = player.name })
+  local simple_position = Helpers.simplify_position(TagEditorGUI.get_current_position(player))
+  
   if not map_tag then
-    for _, mt in ipairs(map_tags) do
-      local pos = Helpers.gps_to_map_position(mt.gps)
-      if pos and pos.x == map_position.x and pos.y == map_position.y then
-        map_tag = mt
-        break
-      end
-    end
-  end
-  if not map_tag then
-    map_tag = MapTag.new(player, map_position, chart_tag, is_favorite, description)
-    if map_tag then
-      -- Always ensure faved_by_players is an array
-      if not map_tag.faved_by_players or type(map_tag.faved_by_players) ~= "table" then
-        map_tag.faved_by_players = {}
-      end
-      local is_in_array = false
-      for _, idx in ipairs(map_tag.faved_by_players) do
-        if idx == player_index then is_in_array = true; break end
-      end
-      if is_favorite and not is_in_array then
-        table.insert(map_tag.faved_by_players, player_index)
-      end
-    end
-  else -- update the existing map_tag
+    map_tag = MapTag.new(player, simple_position, safe_chart_tag, is_favorite, input.description)
+  else
     map_tag.gps = gps
-    if not map_tag.faved_by_players or type(map_tag.faved_by_players) ~= "table" then
-      map_tag.faved_by_players = {}
-    end
-    local is_in_array, idx_slot = Helpers.index_is_in_table(map_tag.faved_by_players, player.index)
-    if is_favorite and not is_in_array then
-      table.insert(map_tag.faved_by_players, player_index)
-    elseif not is_favorite and is_in_array then
-      table.remove(map_tag.faved_by_players, idx_slot)
-    end
-    map_tag.description = description
+    map_tag.description = input.description
+    map_tag.chart_tag = chart_tag
   end
   if map_tag then
-    -- Remove any runtime object references before storing
-    if map_tag.tag then map_tag.tag = nil end
-    -- Only store serializable fields (gps, faved_by_players, created_by, text, description, etc)
+    map_tag.faved_by_players = map_tag.faved_by_players or {}
+    local is_in, t_idx = Helpers.index_is_in_table(map_tag.faved_by_players, player.index)
+    if is_favorite and not is_in then
+      table.insert(map_tag.faved_by_players, player.index)
+    end
     Storage.add_or_update_map_tag(player, map_tag)
   end
+  return map_tag
+end
 
-  -- Favorite logic
-  local slot = nil
-  local favorites = Storage.get_player_favorites(player)
-  -- see if the favorite already exists - match by map_tag.gps
-  local existing_favorite, existing_idx = Helpers.find_by_predicate(favorites, function(v) return v.gps == gps end) or
-      nil, -1
+--- Handles the confirm/save action for the tag editor GUI
+-- @param player LuaPlayer
+function TagEditorGUI.handle_confirm(player)
+  if not player then return end
+  local gui = player.gui.screen
+  local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
+  if not frame then player.print("[DEBUG] No tag editor frame found"); return end
 
-  -- if is_favorite, make sure we have the favorite in the collection
-  -- if not, make sure that there is no favorite for that location
-  if not existing_favorite then
-    if is_favorite then -- Required for runtime: GUI state can change
-      slot = Storage.get_next_available_favorite_slot(player)
-      if not slot then
-        is_favorite = false
-      else
-        favorites[slot] = {
-          gps = gps,
-          slot_locked = false
-        }
-      end
-    end
-  else
-    if not is_favorite then
-      table.remove(favorites, existing_idx)
-    end
+  -- Always retrieve position from Storage (source of truth)
+  local current_position = TagEditorGUI.get_current_position(player)
+  if not current_position or type(current_position) ~= "table" or current_position.x == nil or current_position.y == nil then
+    player.print("[DEBUG] No valid current_position in Storage"); return
   end
 
+  -- Validate position before use
+  if not Helpers.is_valid_map_position(current_position) then
+    return
+  end
+
+  -- Use current_position for all downstream logic
+  local gps = Helpers.format_gps(current_position.x, current_position.y, player.surface.index)
+
+  -- Extract GUI values using shared helpers
+  local input = TagEditorGUI.get_gui_input(frame, player)
+
+  -- Validate inputs (position, icon, text, description)
+  local valid, new_text, new_description = TagEditorGUIValidation.validate_inputs(current_position, input.icon, input.text, input.description, player)
+  if not valid then
+    return
+  end
+
+  -- Find or create chart_tag
+  local chart_tag = TagEditorGUI.find_create_chart_tag_on_confirm(player, gps, input)
+  if not chart_tag then
+    TagEditorGUI.close(player); return
+  end
+
+  -- MapTag creation/update
+  local map_tag = TagEditorGUI.find_create_map_tag_on_confirm(player, gps, chart_tag, input)
+
+  -- Favorite logic
+  if not not input.is_favorite then
+    TagEditorGUI.update_favorite(player, gps)
+  else
+    TagEditorGUI.remove_favorite(player, gps)
+  end
+  
   if Storage.save_data then Storage.save_data(Storage.get()) end
+
   TagEditorGUI.close(player)
+end
+
+--- Updates or adds a favorite for the given player and gps. Also updates all map_tag objects for all players if needed.
+-- @param player LuaPlayer
+-- @param gps string
+-- @param slot_locked boolean|nil (optional, default false)
+function TagEditorGUI.update_favorite(player, gps, slot_locked)
+  slot_locked = slot_locked or false
+  local favorites = Storage.get_player_favorites(player)
+  local existing_favorite, existing_idx = Helpers.find_by_predicate(favorites, function(v) return v.gps == gps end)
+  if not existing_favorite then
+    local slot = Storage.get_next_available_favorite_slot(player)
+    if slot then
+      favorites[slot] = { gps = gps, slot_locked = slot_locked }
+    end
+  end
+  -- Update all map_tags for all players if this favorite affects shared tags
+  for _, other in pairs(_G.game.players) do
+    local map_tag = Storage.find_map_tag_by_gps(other, gps)
+    if map_tag then
+      map_tag.faved_by_players = map_tag.faved_by_players or {}
+      local is_in = false
+      for _, idx in ipairs(map_tag.faved_by_players) do
+        if idx == player.index then is_in = true; break end
+      end
+      table.insert(map_tag.faved_by_players, player.index)
+      Storage.add_or_update_map_tag(other, map_tag)
+    end
+  end
+end
+
+--- Removes a favorite for the given player and gps. Also updates all map_tag objects for all players if needed.
+-- @param player LuaPlayer
+-- @param gps string
+function TagEditorGUI.remove_favorite(player, gps)
+  local favorites = Storage.get_player_favorites(player)
+  for i, fav in ipairs(favorites) do
+    if fav and fav.gps == gps then
+      favorites[i] = nil
+      break
+    end
+  end
+  -- Update all map_tags for all players if this favorite affects shared tags
+  for _, other in pairs(_G.game.players) do
+    local map_tag = Storage.find_map_tag_by_gps(other, gps)
+    if map_tag then
+      -- map_tag.faved_by_players is always a table
+      for idx = #map_tag.faved_by_players, 1, -1 do
+        if map_tag.faved_by_players[idx] == player.index then
+          table.remove(map_tag.faved_by_players, idx)
+        end
+      end
+      Storage.add_or_update_map_tag(other, map_tag)
+    end
+  end
 end
 
 --- Handles tag editor actions (confirm, delete, move)
@@ -197,40 +243,18 @@ function TagEditorGUI.handle_action(player, action)
     TagEditorGUI.handle_confirm(player)
   elseif action == "delete" then
     local gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
-    local chart_tags = Storage.get_chart_tags(player)
-    local found_tag, found_idx = Storage.find_chart_tag_by_gps(player, gps)
-    --[[@diagnostic disable-next-line: unreachable-code]]
-    if found_tag then -- Required for runtime: tag may not exist
-      --[[@diagnostic disable-next-line: unreachable-code]]
-      if found_tag.created_by ~= player.name then
-        player.print { "FavoriteTeleport.ft_tag_editor_error_not_creator" }
-        return
-      end
-      --[[@diagnostic disable-next-line: unreachable-code]]
-      if found_tag.last_user ~= player.name then
-        player.print { "FavoriteTeleport.ft_tag_editor_error_not_last_user" }
-        return
-      end
-      --[[@diagnostic disable-next-line: unreachable-code]]
-      if found_tag.tag and found_tag.tag.valid then
-        found_tag.tag.destroy()
-      end
-      --[[@diagnostic disable-next-line: unreachable-code]]
-      if chart_tags and found_idx then
-        chart_tags[found_idx] = nil
-      end
-      local map_tags = Storage.get_map_tags(player)
-      local map_tag, map_idx = Storage.find_map_tag_by_gps(player, gps)
-      --[[@diagnostic disable-next-line: unreachable-code]]
-      if map_tag and map_idx then
-        table.remove(map_tags, map_idx)
-      end
-      
-      Storage.reset_chart_tags(player)
-      if Storage.save_data then Storage.save_data(Storage.get()) end
-      player.print { "FavoriteTeleport.ft_tag_editor_deleted" }
-      TagEditorGUI.close(player)
+    -- Use the new storage method to destroy the chart tag and remove from storage
+    local destroyed = Storage.destroy_chart_tag(player, gps)
+    -- Remove map tag if present
+    local map_tags = Storage.get_map_tags(player)
+    local map_tag, map_idx = Storage.find_map_tag_by_gps(player, gps)
+    if map_tag and map_idx then
+      table.remove(map_tags, map_idx)
     end
+    Storage.reset_chart_tags(player)
+    if Storage.save_data then Storage.save_data(Storage.get()) end
+    player.print { "FavoriteTeleport.ft_tag_editor_deleted" }
+    TagEditorGUI.close(player)
     return
   elseif action == "move" then
     local storage = Storage.get()
@@ -255,25 +279,20 @@ function TagEditorGUI.update_save_btn(player)
   if not outer then return end
   local frame = outer.ft_tag_editor_frame
   if not frame then return end
-  -- Corrected: descend into content_frame for row lookups
   local content_frame = frame.ft_tag_editor_content_frame
   if not content_frame then return end
   local action_row = outer.ft_tag_editor_action_row
   local save_btn = action_row and action_row.ft_tag_editor_save_btn
-  local text_row = content_frame.ft_tag_editor_text_row
-  local text_box = text_row and text_row.ft_tag_editor_textbox
-  local icon_row = content_frame.ft_tag_editor_icon_row
-  local icon_picker = icon_row and icon_row["tag-editor-icon"]
+  local text_box = GuiBase.find_by_path(content_frame, {"ft_tag_editor_text_row", "ft_tag_editor_textbox"})
+  local icon_picker = GuiBase.find_by_path(content_frame, {"ft_tag_editor_icon_row", "tag-editor-icon"})
   if not save_btn then return end
   local text_val = text_box and text_box.text and text_box.text:match("%S")
-  local icon_val = icon_picker and icon_picker.elem_value
+  local icon_val = icon_picker and icon_picker.elem_value or ""
   local icon_selected = false
-  if icon_val then
-    if type(icon_val) == "table" then
-      icon_selected = icon_val.name ~= nil and icon_val.name ~= ""
-    elseif type(icon_val) == "string" then
-      icon_selected = icon_val ~= ""
-    end
+  if type(icon_val) == "table" then
+    icon_selected = icon_val.name ~= nil and icon_val.name ~= ""
+  elseif type(icon_val) == "string" then
+    icon_selected = icon_val ~= ""
   end
   save_btn.enabled = (text_val ~= nil) or icon_selected
   if save_btn.enabled then
@@ -284,7 +303,7 @@ function TagEditorGUI.update_save_btn(player)
 end
 
 -- Helper: returns true if the element is inside the tag editor frame
-local function is_inside_tag_editor(element)
+local function click_is_inside_tag_editor(element)
   while element do
     if element.name == "ft_tag_editor_outer_frame" then
       return true
@@ -304,7 +323,7 @@ function TagEditorGUI.on_click(event)
   if gui.ft_tag_editor_outer_frame then
     local element = event.element
     if not element or not element.valid then return end
-    if not is_inside_tag_editor(element) and element.name ~= "ft_tag_editor_outer_frame" then
+    if not click_is_inside_tag_editor(element) and element.name ~= "ft_tag_editor_outer_frame" then
       -- Click was outside the tag editor, ignore
       return
     end

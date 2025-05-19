@@ -22,75 +22,74 @@ local function add_row(parent, name, label_caption, label_style, element_def, op
   return row, label, element
 end
 
---[[ Old version - no debugging
 function TagEditorGUIBuilderClass:new(player, position, context)
-  
-  local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
-  local map_tag = Storage.find_map_tag_by_gps(player, gps)
+  if not player or not position then return end
+  if not Storage.player_in_chart_view(player) then return end
+  if Helpers.is_on_space_platform(player) or player.character == nil then return end
 
-  if not chart_tag then
-    local _text = Helpers.gps_map_position_string(gps)
-    local chart_tag_spec = {
-      position = position,
-      icon = nil,
-      text = _text,
-      last_user = player.name
-    }
-    chart_tag = player.force.add_chart_tag(player.surface, chart_tag_spec)
-    chart_tag = Storage.find_chart_tag_by_gps(player, gps)
-    if not chart_tag then return end
+  --[[ -- Validate position: do not allow {x=0, y=0} unless explicitly intended
+  if type(position) ~= "table" or type(position.x) ~= "number" or type(position.y) ~= "number" then
+    return nil
+  end
+  if position.x == 0 and position.y == 0 then
+    -- Only allow {0,0} if explicitly allowed via context
+    if not (context and context.allow_zero_position) then
+      return nil
+    end
+  end]]
+
+  position = Helpers.snap_position(position, Constants.settings.SNAP_SCALE_FOR_CLICKED_TAG)
+  local position_can_be_tagged = Helpers.position_can_be_tagged(player, position)
+  if not position_can_be_tagged then
+    --TODO let the player know that they are not able to create a tag from the position
+    return nil
   end
 
-  if not map_tag then
-    map_tag = MapTag.new(player, position, chart_tag, false, "")
-  end
 
-  local o = {
-    player = player,
-    position = position,
-    is_favorite = map_tag.is_favorite,
-    context = context,
-    gui = player.gui.screen,
-    outer_frame = nil,
-    content_frame = nil,
-    gps = gps,
-    chart_tag = chart_tag,
-    map_tag = map_tag
-  }
-  setmetatable(o, self)
-  return o
-end
-]]
-
-
-function TagEditorGUIBuilderClass:new(player, position, context)
-  if not player or not position then
-    return
-  end
-
+  --- @type LuaCustomChartTag|nil
+  local chart_tag = nil
   local gps = Helpers.map_position_to_gps(position, player.surface.index)
-  if not gps then
-    return
+
+  -- TODO: Improve snap_scale logic.
+  -- Current approach snaps to the outside of the indicator for better UX: if the chart_tag indicator is highlighted ([]),
+  -- the user expects to select that location. However, the indicator is square and the selector is round, which can cause
+  -- slight mismatches. Consider snapping to the center of the indicator, matching selector/indicator shapes, or adding a
+  -- buffer zone for more intuitive selection. Also, explore dynamic snap_scale based on zoom or user preference.
+  local position_has_colliding_tag =
+      Helpers.position_has_colliding_tag(player, position, Constants.settings.BOUNDING_BOX_TOLERANCE)
+  if position_has_colliding_tag ~= nil then
+    -- we are editing, get the matching chart_tag
+    -- update the chart_tag position if necessary. Sometimes a chart_tag may have been created
+    -- by methods outside of this mod. This will normalize the position xxx.yyy
+    local collide_gps = Helpers.format_gps(position_has_colliding_tag.x, position_has_colliding_tag.y,
+      player.surface.index)
+    local found_tag = Storage.find_chart_tag_by_gps(player, collide_gps)
+
+    -- update to snapped pos
+    chart_tag = Storage.rehome_chart_tag(player, found_tag, collide_gps)
+    gps = collide_gps
   end
 
-  local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
   -- Do NOT create a chart tag here! Only look up existing.
-
+  chart_tag = Storage.find_chart_tag_by_gps(player, gps) or nil
   local map_tag = Storage.find_map_tag_by_gps(player, gps)
-  -- Only proceed if map_tag exists (do not attempt to create a new one here)
-  if not map_tag then
-    return
-  end
+
+  local favorite_calc = map_tag and
+      map_tag:is_player_favorite(player) or false
+
+  local effective_position = chart_tag and chart_tag.position or position
+
+  Storage.set_tag_editor_position(player, effective_position)
 
   local o = {
     player = player,
-    position = position,
-    is_favorite = false, -- No is_favorite field, set to false for GUI
+    position = effective_position, -- use the chart tag's pos
+    is_favorite = favorite_calc,
     context = context,
     gui = player.gui.screen,
     outer_frame = nil,
     content_frame = nil,
-    gps = gps,
+    gps = Helpers.format_gps(effective_position.x, effective_position.y, player.surface.index) or gps,
     chart_tag = chart_tag,
     map_tag = map_tag
   }
@@ -268,20 +267,22 @@ function TagEditorGUIBuilderClass:build_content_frame()
     "te_tr_teleport_label", {
       type = "button",
       name = "ft_tag_editor_pos_btn",
-      caption = Helpers.gps_map_position_string(self.gps),
+      caption = Helpers.gps_to_map_position_string(self.gps),
       style = "ft_teleport_button"
     })
 
-  --local max_slots = Constants.MAX_FAVORITE_SLOTS
   local available_slots = Storage.get_available_favorite_slots_count(self.player)
-  local is_already_favorite = false -- No is_favorite field, so always false
-  local favorite_enabled = (available_slots > 0) or is_already_favorite
+  local faved = false
+  if self.map_tag and self.map_tag:is_player_favorite(self.player) then
+    faved = true
+  end
+  local favorite_enabled = (available_slots > 0) or faved
 
   add_row(content_frame, "ft_tag_editor_favorite_row", { "ft_tag_editor_favorite_label" },
     "te_tr_favorite_label", {
       type = "sprite-button",
       name = "ft_tag_editor_favorite_btn",
-      sprite = (is_already_favorite and favorite_enabled) and "utility/check_mark_green" or nil,
+      sprite = faved and "utility/check_mark_green" or nil,
       tooltip = { "ft_tag_editor_favorite_tooltip" },
       style = "ft_favorite_button",
       enabled = favorite_enabled
