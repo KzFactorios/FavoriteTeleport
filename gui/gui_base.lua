@@ -66,6 +66,7 @@ end
 -- @param path table (array of names)
 -- @return LuaGuiElement|nil
 function GuiBase.find_by_path(parent, path)
+    if not parent or not path or #path == 0 then return nil end
     local current = parent
     for _, name in ipairs(path) do
         if not current or not current.children then return nil end

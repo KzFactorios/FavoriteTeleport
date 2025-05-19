@@ -26,23 +26,15 @@ local validation_strategies = {
   end,
   function(icon, text, description, player)
     if text and #text > MAX_TEXT_LENGTH then
-      -- Truncate and trim excess
-      local truncated = text:sub(1, MAX_TEXT_LENGTH)
-      if player and truncated ~= text then
-        player.print{"FavoriteTeleport.ft_tag_editor_error_text_length"}
-      end
-      return true, truncated
+      if player then player.print{"FavoriteTeleport.ft_tag_editor_error_text_length"} end
+      return false
     end
     return true
   end,
   function(icon, text, description, player)
     if description and #description > MAX_DESCRIPTION_LENGTH then
-      -- Truncate and trim excess
-      local truncated = description:sub(1, MAX_DESCRIPTION_LENGTH)
-      if player and truncated ~= description then
-        player.print{"FavoriteTeleport.ft_tag_editor_error_description_length"}
-      end
-      return true, nil, truncated
+      if player then player.print{"FavoriteTeleport.ft_tag_editor_error_description_length"} end
+      return false
     end
     return true
   end

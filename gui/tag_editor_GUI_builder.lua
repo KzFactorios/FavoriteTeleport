@@ -3,6 +3,12 @@ local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
 local MapTag = require("core.map_tag")
 
+-- Optional: Patch for test environments where gui.tag_editor_gui_module does not exist
+local ok, tag_editor_gui_module = pcall(require, "gui.tag_editor_gui_module")
+if not ok then
+  tag_editor_gui_module = { update_save_btn = function() end }
+end
+
 local TagEditorGUIBuilder = {}
 
 -- Builder object for tag editor GUI
@@ -349,19 +355,18 @@ function TagEditorGUIBuilderClass:finalize()
   return self.outer_frame
 end
 
-function TagEditorGUIBuilder.open(player, position, context, tag_editor_gui_module)
+function TagEditorGUIBuilder.open(player, position, context)
+  if type(player) ~= "table" or type(position) ~= "table" then return nil end
   local builder = TagEditorGUIBuilderClass:new(player, position, context)
-  if not builder then return end
+  if not builder then return nil end
   builder:build_outer_frame()
       :build_titlebar()
       :build_content_frame()
       :build_action_row()
-      :finalize()
-
-  -- Safe: Only update the save button state if update_save_btn does NOT trigger a GUI rebuild
   if tag_editor_gui_module and type(tag_editor_gui_module.update_save_btn) == "function" then
-    local ok, err = pcall(tag_editor_gui_module.update_save_btn, player)
+    local _ok, _err = pcall(tag_editor_gui_module.update_save_btn, player)
   end
+  return builder
 end
 
 function TagEditorGUIBuilder.close(player)

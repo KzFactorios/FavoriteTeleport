@@ -16,4 +16,15 @@ function ErrorHandler.log_error(msg)
   safe_log(log_msg)
 end
 
+--- Safely calls a function and catches errors, returning (true, ...) on success or (false, errmsg) on error
+function ErrorHandler.safe_call(fn, ...)
+  local ok, result_or_err, rest = pcall(fn, ...)
+  if ok then
+    return true, result_or_err, rest
+  else
+    ErrorHandler.log_error("safe_call error: " .. tostring(result_or_err))
+    return false, tostring(result_or_err)
+  end
+end
+
 return ErrorHandler

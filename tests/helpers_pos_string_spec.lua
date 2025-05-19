@@ -1,8 +1,6 @@
--- tests/helpers_spec.lua
--- This file is now split into helpers_map_position_spec.lua and helpers_pos_string_spec.lua
--- See those files for the actual tests.
+-- tests/helpers_pos_string_spec.lua
+-- Unit tests for core/utils/helpers.lua (pos_string conversions)
 
--- Make sure busted globals are available
 local busted = require("busted")
 local assert = busted.assert
 local describe = busted.describe
@@ -12,19 +10,7 @@ package.loaded["core.utils.helpers"] = nil
 package.loaded["core.utils.helpers"] = nil
 local Helpers = require("core.utils.helpers")
 
-describe("Helpers", function()
-  it("converts MapPosition to ChunkPosition", function()
-    local map_pos = {x = 65, y = -33}
-    local chunk_pos = Helpers.map_position_to_chunk_position(map_pos)
-    assert.are.same({x = 2, y = -2}, chunk_pos)
-  end)
-
-  it("converts ChunkPosition to MapPosition", function()
-    local chunk_pos = {x = 3, y = -1}
-    local map_pos = Helpers.chunk_position_to_map_position(chunk_pos)
-    assert.are.same({x = 96, y = -32}, map_pos)
-  end)
-
+describe("Helpers: Pos String", function()
   it("converts pos_string to MapPosition", function()
     local pos_string = "065.-033"
     local map_pos = Helpers.pos_string_to_map_position(pos_string)

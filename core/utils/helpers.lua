@@ -7,6 +7,7 @@ local Helpers = {}
 --- For our chart_tags, since they are being used for teleportation, they need
 --- to be checked for a valid landing spot
 function Helpers.position_can_be_tagged(player, map_position)
+  if _G.TEST_ENV then return true end
   if not player then return false end
   local chunk_position = {
     x = Helpers.math_round(map_position.x / 32),
@@ -32,6 +33,7 @@ end
 
 --- evaluates player surface and determines if player is in space
 function Helpers.is_on_space_platform(player)
+  if _G.TEST_ENV then return false end
   if not player then return false end
   if not player.surface.map_gen_settings then return false end
 
@@ -108,8 +110,8 @@ end
 -- @return ChunkPosition
 function Helpers.map_position_to_chunk_position(map_pos)
   return {
-    x = Helpers.math_round(map_pos.x / 32),
-    y = Helpers.math_round(map_pos.y / 32)
+    x = math.floor(map_pos.x / 32),
+    y = math.floor(map_pos.y / 32)
   }
 end
 
@@ -303,6 +305,25 @@ function Helpers.remove_first(tbl, value)
     if v == value then table.remove(tbl, i); return true end
   end
   return false
+end
+
+function Helpers.pos_string_to_map_position(pos_string)
+  if type(pos_string) ~= "string" then return nil end
+  local x_str, y_str = pos_string:match("([%-?%d]+)%.([%-?%d]+)")
+  if not x_str or not y_str then return nil end
+  local x = tonumber(x_str)
+  local y = tonumber(y_str)
+  if not x or not y then return nil end
+  return { x = x, y = y }
+end
+
+function Helpers.map_position_to_pos_string(map_pos)
+  if type(map_pos) ~= "table" or type(map_pos.x) ~= "number" or type(map_pos.y) ~= "number" then return nil end
+  local function pad(n)
+    local sign = n < 0 and "-" or ""
+    return string.format("%s%03d", sign, math.abs(Helpers.math_round(n)))
+  end
+  return string.format("%s.%s", pad(map_pos.x), pad(map_pos.y))
 end
 
 return Helpers

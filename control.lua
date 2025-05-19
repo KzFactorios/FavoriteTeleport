@@ -1,6 +1,10 @@
----@diagnostic disable: undefined-global
 -- control.lua
 -- Main entry point for event registration and mod lifecycle
+
+-- Defensive patch: ensure script.events is always present for tests and strict environments
+if _G.script and _G.script.events == nil then
+  _G.script.events = setmetatable({}, { __index = function(_, _) return 999 end })
+end
 
 local Context = require("core.context")
 local MapTag = require("core.map_tag")

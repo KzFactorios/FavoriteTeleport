@@ -231,6 +231,7 @@ end
 -- @param player LuaPlayer
 -- @param action string
 function TagEditorGUI.handle_action(player, action)
+  if not player then return end
   local gui = player.gui.screen
   local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
   if not frame then return end
@@ -313,11 +314,20 @@ local function click_is_inside_tag_editor(element)
   return false
 end
 
+-- Helper: returns player_index from event, fallback if Helpers.find_player_index_in_event is missing
+local function get_player_index_from_event(event)
+  if Helpers and Helpers.find_player_index_in_event then
+    return Helpers.find_player_index_in_event(event)
+  end
+  return event and event.player_index or nil
+end
+
 -- Patch: ignore clicks outside tag editor when open
 function TagEditorGUI.on_click(event)
-  local player_index = Helpers.find_player_index_in_event(event)
+  if not event or not event.player_index then return end
+  local player_index = get_player_index_from_event(event)
   if not player_index then return end
-  local player = _G.game.get_player(player_index)
+  local player = _G.game and _G.game.get_player and _G.game.get_player(player_index) or nil
   if not player then return end
   local gui = player.gui.screen
   if gui.ft_tag_editor_outer_frame then

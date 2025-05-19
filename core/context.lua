@@ -10,6 +10,7 @@
 -- All persistent data access should go through Context, not Storage, to allow for future extensibility.
 
 --- @class Context
+--- @field _data table
 --- @field get_player_data fun(player: LuaPlayer): table
 --- @field player LuaPlayer
 local Context = {}
@@ -24,15 +25,22 @@ end
 --- Gets the mod's global persistent data
 -- @return table
 function Context.get_data()
-  return Storage.get_data()
+  if not Context or not Context._data then
+    Context._data = require("core.storage").get_data() or {}
+  end
+  if type(Context._data) ~= "table" then Context._data = {} end
+  return Context._data
 end
 
 --- Gets persistent data for a specific player by index
--- @param player LuaPlayer
+-- @param player LuaPlayer|nil
 -- @return table
 function Context.get_player_data(player)
+  if not player then return {} end
   if not Context.player then Context.player = player end
-  return Storage.get_player_data(player)
+  local pdata = Storage.get_player_data(player)
+  if type(pdata) ~= "table" then return {} end
+  return pdata
 end
 
 --- Saves the mod's persistent data
