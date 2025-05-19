@@ -14,7 +14,13 @@ describe("MapTag (edge cases)", function()
   end)
 
   it("returns nil for new with invalid position", function()
-    local player = { name = "Test", index = 1, surface = { index = 1 } }
+    -- Mock a LuaPlayer with uint index (simulate Factorio API)
+    local player = {
+      name = "Test",
+      index = 1, -- Lua's number type, but for tests we assume this is fine
+      surface = { index = 1 },
+      is_player = true -- add a distinguishing property if your code checks for it
+    }
     assert.is_nil(MapTag.new(player, nil, nil, false, "desc"))
     assert.is_nil(MapTag.new(player, {}, nil, false, "desc"))
     assert.is_nil(MapTag.new(player, {x="a",y=2}, nil, false, "desc"))

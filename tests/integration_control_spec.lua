@@ -15,15 +15,13 @@ local function mock_event(event_type, player_index)
   return { name = event_type, player_index = player_index or 1 }
 end
 
--- Patch global script for integration test
-_G.script = _G.script or {
-  on_event = function(...) end,
-  on_nth_tick = function(...) end,
-  generate_event_name = function() return 1 end,
-  on_init = function(...) end,
-  on_load = function(...) end,
-  on_configuration_changed = function(...) end,
-}
+-- Patch global script for integration test to accept any arguments (fixes 'expected 0 parameters but found 2')
+_G.script = _G.script or {}
+_G.script.on_event = function(...) end
+_G.script.on_nth_tick = function(...) end
+_G.script.on_init = function(...) end
+_G.script.on_load = function(...) end
+_G.script.on_configuration_changed = function(...) end
 _G.script.events = {
   on_gui_click = 1,
   on_gui_opened = 2,
@@ -52,20 +50,13 @@ for _, field in ipairs(required_defines_fields) do
   end
 end
 
--- Patch global remote for integration test
-global = global or {}
-_G.remote = _G.remote or {
-  call = function(interface, method)
-    if interface == "FavoriteTeleport" and method == "get_storage" then
-      return global.storage or {}
-    end
-    return {}
-  end,
-  add_interface = function() end
-}
+-- Patch global remote for integration test to accept any arguments (fixes 'expected 0 parameters but found 2')
+_G.remote = _G.remote or {}
+_G.remote.add_interface = function(...) end
+_G.remote.call = function(...) return {} end
 
--- Patch global serpent for integration test
-_G.serpent = _G.serpent or { line = function(val) return tostring(val) end }
+-- Patch global serpent for integration test to accept any arguments (fixes 'expected 1 parameters but found 2')
+_G.serpent = _G.serpent or { load = function() end, block = function() end, dump = function() end, line = function(val, opts) return tostring(val) end }
 
 -- Patch global ft_storage_viewer_expand_state and player_index for integration test
 _G.ft_storage_viewer_expand_state = _G.ft_storage_viewer_expand_state or {}

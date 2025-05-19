@@ -12,7 +12,7 @@ storage = {
   mod_version = "0.0.01",
   players = {
     [player_index] = {
-      show_fave_bar_buttons = boolean,
+      toggle_fave_bar_buttons = boolean,
       render_mode = string,
       -- ...other per-player data
       surfaces = {
@@ -61,7 +61,7 @@ storage = {
 - Each tag tracks which players have favorited it via `faved_by_players`.
 
 ## Settings
-- Per-player settings (e.g., `show_fave_bar_buttons`, `render_mode`) are stored at the player level.
+- Per-player settings (e.g., `toggle_fave_bar_buttons`, `render_mode`) are stored at the player level.
 - Mod-wide settings (e.g., `mod_version`) are stored at the root.
 
 ---

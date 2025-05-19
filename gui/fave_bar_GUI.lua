@@ -45,8 +45,8 @@ function FaveBarGUI.build(player)
 
   local button = bar.add{
     type = "button",
-    name = Constants.PREFIX .. "toggle_favorite_mode_button",
-    style = Constants.PREFIX .. "toggle_favorite_mode_button",
+    name = "toggle_favorite_buttons",
+    style = "toggle_favorite_buttons",
     caption = "★"
   }
   button.style.font = "default-large-bold"

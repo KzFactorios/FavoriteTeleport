@@ -29,7 +29,7 @@ end
 
 --[[players = {
     [player_index] = {
-      show_fave_bar_buttons = boolean,
+      toggle_fave_bar_buttons = boolean,
       render_mode = string,
       -- ...other per-player data
       surfaces = {
@@ -44,7 +44,7 @@ function Storage.get_player_data(player)
   if not player or not player.surface or not player.index then
     -- Return a dummy table (not a reference to real storage)
     return {
-      show_fave_bar_buttons = true,
+      toggle_fave_bar_buttons = true,
       render_mode = (_G.defines and _G.defines.render_mode and _G.defines.render_mode.game) or "game",
       surfaces = {},
     }
@@ -58,7 +58,7 @@ function Storage.get_player_data(player)
   local pdata = storage.players[player_index]
 
   -- Ensure all required fields are present and robustly initialized
-  if pdata.show_fave_bar_buttons == nil then pdata.show_fave_bar_buttons = true end
+  if pdata.toggle_fave_bar_buttons == nil then pdata.toggle_fave_bar_buttons = true end
 
   if pdata.render_mode == nil then
     if _G.defines and _G.defines.render_mode and _G.defines.render_mode.game then

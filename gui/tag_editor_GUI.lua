@@ -13,24 +13,17 @@ local MapTag = require("core.map_tag")
 local TagEditorGUI = {}
 TagEditorGUI.current_position = nil -- Stores the current MapPosition for the open tag editor
 
-TagEditorGUI.open = function(player, position, context)
-  if Storage.set_tag_editor_position then
-    Storage.set_tag_editor_position(player, position)
-  end
-  return TagEditorGUIBuilder.open(player, position, context, TagEditorGUI)
+function TagEditorGUI.open(player, position, context)
+  Storage.set_tag_editor_position(player, position)
+  return TagEditorGUIBuilder.open(player, position, context)
 end
 
-TagEditorGUI.get_current_position = function(player)
-  if Storage.get_tag_editor_position then
-    return Storage.get_tag_editor_position(player)
-  end
-  return nil
+function TagEditorGUI.get_current_position(player)
+  return Storage.get_tag_editor_position(player)
 end
 
-TagEditorGUI.close = function(player)
-  if Storage.clear_tag_editor_position then
-    Storage.clear_tag_editor_position(player)
-  end
+function TagEditorGUI.close(player)
+  Storage.clear_tag_editor_position(player)
   return TagEditorGUIBuilder.close(player)
 end
 

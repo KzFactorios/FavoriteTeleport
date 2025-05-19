@@ -21,22 +21,21 @@ function Settings:getPlayerSettings(player)
     return settings
   end
 
-  local PREFIX = Constants.PREFIX
   local mod_settings = player.mod_settings
   ---@cast mod_settings table<string, {value: any}>  -- EmmyLua type cast for static analysis
 
-  local t_radius = mod_settings[PREFIX .. "teleport-radius"]
+  local t_radius = mod_settings["teleport-radius"]
   if t_radius and t_radius.value ~= nil then
     settings.teleport_radius = math.floor(tonumber(t_radius.value) or Constants.TELEPORT_RADIUS_DEFAULT)
   end
 
-  local favorites_on = mod_settings[PREFIX .. "favorites-on"]
+  local favorites_on = mod_settings["favorites-on"]
   if favorites_on and favorites_on.value ~= nil then
     ---@cast favorites_on { value: boolean }
     settings.favorites_on = not not favorites_on.value
   end
 
-  local destination_msg_on = mod_settings[PREFIX .. "destination-msg-on"]
+  local destination_msg_on = mod_settings["destination-msg-on"]
   if destination_msg_on and destination_msg_on.value ~= nil then
     ---@cast destination_msg_on { value: boolean }
     settings.destination_msg_on = not not destination_msg_on.value

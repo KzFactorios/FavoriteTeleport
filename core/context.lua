@@ -25,10 +25,10 @@ end
 --- Gets the mod's global persistent data
 -- @return table
 function Context.get_data()
-  if not Context or not Context._data then
+  if type(Context) ~= "table" then return {} end
+  if type(Context._data) ~= "table" then
     Context._data = require("core.storage").get_data() or {}
   end
-  if type(Context._data) ~= "table" then Context._data = {} end
   return Context._data
 end
 
