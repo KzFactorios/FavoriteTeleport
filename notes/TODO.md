@@ -10,3 +10,4 @@
 - [ ] Document any further style or layout tweaks in this file for future reference.
 - [ ] Test for the display of unforeseen large strings - player names, 
 - [ ] Check limits on size for chart tag text
+- [ ] Check for map editor functionality

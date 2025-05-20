@@ -118,5 +118,13 @@ data:extend {
     name = "ft-dev-dump-chart-tags",
     key_sequence = "CONTROL + F9",
     order = "zz"
-  }
+  },
+  {
+    type = "custom-input",
+    name = "ft_gui_stack_esc",
+    key_sequence = "ESCAPE",
+    consuming = "game-only",
+    order = "zz1"
+  },
+  
 }

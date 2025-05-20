@@ -21,6 +21,8 @@ function ContentFrame.build(parent, builder)
     "te_tr_teleport_label", {
       type = "button",
       name = "ft_tag_editor_pos_btn",
+
+      
       caption = Helpers.gps_to_map_position_string(builder.gps),
       style = "ft_teleport_button"
     })

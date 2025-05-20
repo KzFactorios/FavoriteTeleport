@@ -37,3 +37,4 @@ See also: `architecture.md`, `data_schema.md`, `error_handling.md`.
 - Use dot notation for require statement paths
 - Use targeted diagnostic suppressors over global. global is ok but definitely not the default option
 - If there isn't a viable suppression available, leave a comment explaining the type checker limitation and why the code is safe for runtime/test
+- Always be on the lookout for recursive requires. Ensure we are looking out for too many c levels error

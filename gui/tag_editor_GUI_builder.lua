@@ -94,6 +94,9 @@ function TagEditorGUIBuilderClass:build_outer_frame()
     direction = "vertical",
     style = "frame"
   }
+  if self.outer_frame.force_auto_center then
+    self.outer_frame.force_auto_center()
+  end
   return self
 end
 
@@ -127,6 +130,7 @@ function TagEditorGUIBuilderClass:build_titlebar()
     sprite = "utility/close",
     style = "frame_action_button"
   }
+  -- The actual close logic is handled in the on_gui_click event in TagEditorGUI.on_click
   return self
 end
 
