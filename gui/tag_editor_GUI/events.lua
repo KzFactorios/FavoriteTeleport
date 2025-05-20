@@ -2,7 +2,6 @@
 local TagEditorGUIEvents = {}
 local Storage = require('core.storage')
 
--- Command pattern: encapsulate each GUI action as a command object
 local GUICommands = {
   close = function(event, TagEditorGUI, player)
     return "close"
@@ -11,70 +10,9 @@ local GUICommands = {
     return "icon_picker"
   end,
   toggled_favorite_in_place = function(event, TagEditorGUI, player)
-    ---@diagnostic disable-next-line: undefined-global
-    player = player or (event.player_index and game.get_player and game.get_player(event.player_index) or nil)
-    if not player then return end
-    -- Try to get GPS from the GUI
-    local gps = nil
-    local gui = player.gui.screen
-    local outer = gui.ft_tag_editor_outer_frame
-    if outer then
-      local frame = outer.ft_tag_editor_frame
-      if frame then
-        for _, child in pairs(frame.children) do
-          if child.name == "ft_tag_editor_teleport_row" then
-            for _, btn in pairs(child.children) do
-              if btn.name == "ft_tag_editor_pos_btn" then
-                gps = btn.caption
-                break
-              end
-            end
-          end
-        end
-      end
-    end
-    if not gps then return end
-    local Storage = require('core.storage')
-    local map_tag = Storage.find_map_tag_by_gps(player, gps)
-    if map_tag and type(map_tag.is_player_favorite) == "function" then
-      if map_tag:is_player_favorite(player) then
-        if type(map_tag.remove_favorite) == "function" then map_tag:remove_favorite(player) end
-      else
-        if type(map_tag.add_favorite) == "function" then map_tag:add_favorite(player) end
-      end
-    else
-      local favorites = Storage.get_player_favorites(player)
-      for _, fav in pairs(favorites) do
-        if fav.gps == gps then
-          fav.is_favorite = not fav.is_favorite
-        end
-      end
-    end
-    -- Only update the favorite button icon, do not refresh the whole GUI
+    -- Only toggle the icon, do not update storage
     if TagEditorGUI and TagEditorGUI.toggle_favorite_icon then
       TagEditorGUI.toggle_favorite_icon(player)
-    end
-
-    -- After toggling, update the button icon to match the new favorite state
-    local favorite_btn = require('gui.gui_base').find_by_path(
-      player.gui.screen.ft_tag_editor_outer_frame.ft_tag_editor_frame.ft_tag_editor_content_frame,
-      {"ft_tag_editor_favorite_row", "ft_tag_editor_favorite_btn"}
-    )
-    if favorite_btn and favorite_btn.valid then
-      local is_favorite = false
-      local map_tag = Storage.find_map_tag_by_gps(player, gps)
-      if map_tag and type(map_tag.is_player_favorite) == "function" then
-        is_favorite = map_tag:is_player_favorite(player)
-      else
-        local favorites = Storage.get_player_favorites(player)
-        for _, fav in pairs(favorites) do
-          if fav.gps == gps then
-            is_favorite = fav.is_favorite
-            break
-          end
-        end
-      end
-      favorite_btn.sprite = is_favorite and "utility/check_mark_green" or nil
     end
     return "toggled_favorite_in_place"
   end,
@@ -113,7 +51,9 @@ function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
   end
   if not event or not event.element or not event.element.valid then return end
   local gui_player = player or (event.player_index and _G and _G.game and _G.game.get_player and _G.game.get_player(event.player_index))
-  if gui_player and gui_player.gui and gui_player.gui.screen and gui_player.gui.screen.ft_tag_editor_outer_frame then
+  -- NOTE: This check is valid. find_gui_element_by_name now returns the parent if parent_name == target_name.
+  local outer = gui_player and require('core.utils.helpers').find_gui_element_by_name(gui_player, "ft_tag_editor_outer_frame", "ft_tag_editor_outer_frame")
+  if outer then
     if not is_inside_tag_editor(event.element) and event.element.name ~= "ft_tag_editor_outer_frame" then
       -- Click was outside the tag editor, ignore
       return

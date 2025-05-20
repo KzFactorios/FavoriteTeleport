@@ -8,8 +8,7 @@ local MapTag = require("core.map_tag")
 
 function TagEditorGUIActions.handle_confirm(TagEditorGUI, player)
   if not player then return end
-  local gui = player.gui.screen
-  local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
+  local frame = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_frame")
   if not frame then player.print("[DEBUG] No tag editor frame found"); return end
 
   -- Always retrieve position from Storage (source of truth)

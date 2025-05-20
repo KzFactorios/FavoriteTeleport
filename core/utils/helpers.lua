@@ -107,4 +107,44 @@ function Helpers.format_sprite_path(type, name, is_signal)
   return sprite_path
 end
 
+--- Recursively search for a child element by name in a GUI tree, starting from a parent name.
+--- If root is not provided, will search in all standard player GUI roots.
+-- @param player LuaPlayer The player whose GUI to search
+-- @param parent_name string The name of the parent element to search from
+-- @param target_name string The name of the child element to find
+-- @return LuaGuiElement|nil The found element or nil
+local function find_gui_element_by_name(player, parent_name, target_name)
+  if not player or not player.valid or not player.gui then return nil end
+  local roots = { player.gui.screen, player.gui.left, player.gui.top, player.gui.center, player.gui.relative }
+  local function find_parent(element)
+    if not element or not element.valid then return nil end
+    if element.name == parent_name then return element end
+    for _, child in pairs(element.children) do
+      local found = find_parent(child)
+      if found then return found end
+    end
+    return nil
+  end
+  local parent = nil
+  for _, root in ipairs(roots) do
+    parent = find_parent(root)
+    if parent then break end
+  end
+  if not parent then return nil end
+  -- If looking for the parent itself, return it
+  if parent_name == target_name then return parent end
+  local function find_child(element)
+    if not element or not element.valid then return nil end
+    if element.name == target_name then return element end
+    for _, child in pairs(element.children) do
+      local found = find_child(child)
+      if found then return found end
+    end
+    return nil
+  end
+  return find_child(parent)
+end
+
+Helpers.find_gui_element_by_name = find_gui_element_by_name
+
 return Helpers

@@ -37,11 +37,10 @@ TagEditorGUI.on_click = TagEditorGUIEvents.on_click
 -- @param frame LuaGuiElement (ft_tag_editor_frame)
 -- @return table {icon, text, description, is_favorite, favorite_btn, icon_picker, text_box, desc_box}
 function TagEditorGUI.get_gui_input(frame, player)
-  local content_frame = frame.ft_tag_editor_content_frame
-  local icon_picker = GuiBase.find_by_path(content_frame, { "ft_tag_editor_icon_row", "tag-editor-icon" })
-  local favorite_btn = GuiBase.find_by_path(content_frame, { "ft_tag_editor_favorite_row", "ft_tag_editor_favorite_btn" })
-  local text_box = GuiBase.find_by_path(content_frame, { "ft_tag_editor_text_row", "ft_tag_editor_textbox" })
-  local desc_box = GuiBase.find_by_path(content_frame, { "ft_tag_editor_desc_row", "ft_tag_editor_descbox" })
+  local favorite_btn = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_favorite_btn")
+  local icon_picker = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "tag-editor-icon")
+  local text_box = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_textbox")
+  local desc_box = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_descbox")
   local icon = icon_picker and icon_picker.elem_value or nil
   local text = text_box and (text_box.text or ""):gsub("^%s*(.-)%s*$", "%1") or ""
   local description = desc_box and (desc_box.text or ""):gsub("^%s*(.-)%s*$", "%1") or ""
@@ -75,7 +74,7 @@ TagEditorGUI.remove_favorite = FavoriteOps.remove_favorite
 function TagEditorGUI.handle_action(player, action)
   if not player then return end
   local gui = player.gui.screen
-  local frame = gui.ft_tag_editor_outer_frame and gui.ft_tag_editor_outer_frame.ft_tag_editor_frame
+  local frame = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_frame")
   if not frame then return end
 
   local surface = player.surface
@@ -117,9 +116,9 @@ end
 function TagEditorGUI.update_save_btn(player)
   if not player then return end
   local gui = player.gui.screen
-  local outer = gui.ft_tag_editor_outer_frame
+  local outer = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_outer_frame")
   if not outer then return end
-  local frame = outer.ft_tag_editor_frame
+  local frame = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_frame")
   if not frame then return end
   local content_frame = frame.ft_tag_editor_content_frame
   if not content_frame then return end
@@ -128,7 +127,7 @@ function TagEditorGUI.update_save_btn(player)
   local text_box = GuiBase.find_by_path(content_frame, { "ft_tag_editor_text_row", "ft_tag_editor_textbox" })
   local icon_picker = GuiBase.find_by_path(content_frame, { "ft_tag_editor_icon_row", "tag-editor-icon" })
   if not save_btn then return end
-  local text_val = text_box and text_box.text and text_box.text:match("%S")
+  local text_val = text_box and text_box.text and text_box.text:match("%S") or ""
   local icon_val = icon_picker and icon_picker.elem_value or ""
   local icon_selected = false
   if type(icon_val) == "table" then
@@ -136,7 +135,8 @@ function TagEditorGUI.update_save_btn(player)
   elseif type(icon_val) == "string" then
     icon_selected = icon_val ~= ""
   end
-  save_btn.enabled = (text_val ~= nil) or icon_selected
+  -- Enable if either text is non-empty or icon is selected
+  save_btn.enabled = (text_val ~= "") or icon_selected
   if save_btn.enabled then
     save_btn.tooltip = ""
   else
@@ -168,15 +168,19 @@ end
 function TagEditorGUI.on_click(event)
   if not event or not event.player_index then return end
   local player_index = event.player_index
-  ---@diagnostic disable-next-line: undefined-global
-  local player = game.get_player(player_index)
+  local player = _G.game.get_player(player_index)
   if not player then return end
   local gui = player.gui.screen
-  if gui.ft_tag_editor_outer_frame then
+  -- NOTE: This check is valid. find_gui_element_by_name now returns the parent if parent_name == target_name.
+  local outer = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_outer_frame")
+  if outer then
     local element = event.element
     if element and element.valid then
       if element.name == "ft_tag_editor_x_btn" then
         TagEditorGUI.close(player)
+        return
+      elseif element.name == "ft_tag_editor_favorite_btn" then
+        TagEditorGUI.toggle_favorite_icon(player)
         return
       end
     end
@@ -201,38 +205,29 @@ end
 -- Patch: update only the favorite button icon when toggled, do not refresh the whole GUI
 function TagEditorGUI.toggle_favorite_icon(player)
   if not player then return end
-  local gui = player.gui.screen
-  local outer = gui.ft_tag_editor_outer_frame
-  if not outer then return end
-  local frame = outer.ft_tag_editor_frame
-  if not frame then return end
-  local content_frame = frame.ft_tag_editor_content_frame
-  if not content_frame then return end
-  local favorite_btn = GuiBase.find_by_path(content_frame, { "ft_tag_editor_favorite_row", "ft_tag_editor_favorite_btn" })
+  local favorite_btn = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_favorite_btn")
   if not favorite_btn or not favorite_btn.valid then return end
-  -- Set the sprite based on the actual favorite state in storage
-  local gps = nil
-  local teleport_row = GuiBase.find_by_path(content_frame, { "ft_tag_editor_teleport_row" })
-  if teleport_row then
-    local pos_btn = GuiBase.find_by_path(teleport_row, { "ft_tag_editor_pos_btn" })
-    if pos_btn then gps = pos_btn.caption end
+  favorite_btn.sprite = (favorite_btn.sprite == "utility/check_mark_green") and "" or "utility/check_mark_green"
+end
+
+function TagEditorGUI.on_text_changed(event)
+  if not event or not event.element or not event.element.valid then return end
+  local player = _G.game.get_player(event.player_index)
+  if not player then return end
+  -- Only update if the changed element is the tag editor text field (not desc field)
+  if event.element.name == "ft_tag_editor_textbox" then
+    TagEditorGUI.update_save_btn(player)
   end
-  local is_favorite = false
-  if gps then
-    local map_tag = Storage.find_map_tag_by_gps(player, gps)
-    if map_tag and type(map_tag.is_player_favorite) == "function" then
-      is_favorite = map_tag:is_player_favorite(player)
-    else
-      local favorites = Storage.get_player_favorites(player)
-      for _, fav in pairs(favorites) do
-        if fav.gps == gps then
-          is_favorite = fav.is_favorite
-          break
-        end
-      end
-    end
+end
+
+function TagEditorGUI.on_elem_changed(event)
+  if not event or not event.element or not event.element.valid then return end
+  local player = _G.game.get_player(event.player_index)
+  if not player then return end
+  -- Only update if the changed element is the tag editor icon picker
+  if event.element.name == "tag-editor-icon" then
+    TagEditorGUI.update_save_btn(player)
   end
-  favorite_btn.sprite = is_favorite and "utility/check_mark_green" or nil
 end
 
 return TagEditorGUI

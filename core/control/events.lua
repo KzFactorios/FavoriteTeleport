@@ -63,6 +63,16 @@ function Events.register()
     end
     -- If stack is empty, let vanilla handle ESC (game menu or chart view closes)
   end)
+
+  -- Register text changed for tag editor text and desc fields
+  script.on_event(defines.events.on_gui_text_changed, function(event)
+    TagEditorGUI.on_text_changed(event)
+  end)
+
+  -- Register icon picker changes for tag editor
+  script.on_event(defines.events.on_gui_elem_changed, function(event)
+    TagEditorGUI.on_elem_changed(event)
+  end)
 end
 
 return Events

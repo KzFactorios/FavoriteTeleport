@@ -35,6 +35,7 @@ See also: `architecture.md`, `data_schema.md`, `error_handling.md`.
 ### Misc
 - Always put require statements at the top of the file
 - Use dot notation for require statement paths
-- Use targeted diagnostic suppressors over global. global is ok but definitely not the default option
+- Use targeted diagnostic suppressors over global. global is ok but definitely not the oreferred option
 - If there isn't a viable suppression available, leave a comment explaining the type checker limitation and why the code is safe for runtime/test
 - Always be on the lookout for recursive requires. Ensure we are looking out for too many c levels error
+- keep the codebase maintainable and bug-free. read through the code and propose tasks that would help to achieve this goal.
