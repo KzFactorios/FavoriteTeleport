@@ -18,7 +18,6 @@ TagEditorGUI.current_position = nil -- Stores the current MapPosition for the op
 
 function TagEditorGUI.open(player, position, context)
   Storage.set_tag_editor_position(player, position)
-  require("control").push_gui(player, "tag_editor")
   return TagEditorGUIBuilder.open(player, position, context)
 end
 
@@ -28,7 +27,6 @@ end
 
 function TagEditorGUI.close(player)
   Storage.clear_tag_editor_position(player)
-  require("control").pop_gui(player)
   return TagEditorGUIBuilder.close(player)
 end
 
@@ -200,26 +198,6 @@ function TagEditorGUI.on_open_tag_editor(event)
   TagEditorGUI.open(player, event.cursor_position or player.position, {})
 end
 
--- Handles closing the tag editor when ESC is pressed or the GUI is closed
-function TagEditorGUI.on_gui_closed(event)
-  if not event or not event.player_index then return end
-  ---@diagnostic disable-next-line: undefined-global
-  local player = game and game.get_player and game.get_player(event.player_index) or (event.player or nil)
-  if not player then return end
-  local element = event.element
-  if element and element.valid ~= false then
-    -- Accept closing if the closed element is the tag editor or a child
-    local parent = element
-    while parent do
-      if parent.name == "ft_tag_editor_outer_frame" then
-        TagEditorGUI.close(player)
-        return
-      end
-      parent = parent.parent
-    end
-  end
-end
-
 -- Patch: update only the favorite button icon when toggled, do not refresh the whole GUI
 function TagEditorGUI.toggle_favorite_icon(player)
   if not player then return end
@@ -256,7 +234,5 @@ function TagEditorGUI.toggle_favorite_icon(player)
   end
   favorite_btn.sprite = is_favorite and "utility/check_mark_green" or nil
 end
-
-TagEditorGUI.on_gui_closed = TagEditorGUI.on_gui_closed
 
 return TagEditorGUI
