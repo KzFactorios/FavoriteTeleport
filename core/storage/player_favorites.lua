@@ -4,14 +4,15 @@
 local PlayerFavorites = {}
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
-local Storage = require("core.storage")
 
 --- Returns the favorites array for a player on their current surface, initializing any missing slots.
 ---@param player LuaPlayer
 ---@return table[]
 function PlayerFavorites.get_player_favorites(player)
   if type(player) ~= "table" or not player.valid or not player.surface or not player.surface.index then return {} end
-  local pdata = Storage.get_player_data(player)
+  local pdata = PlayerFavorites.get_player_data(player)
+  pdata.surfaces = pdata.surfaces or {}
+  pdata.surfaces[player.surface.index] = pdata.surfaces[player.surface.index] or {}
   local faves = pdata.surfaces[player.surface.index].favorites or {}
   if #faves < Constants.MAX_FAVORITE_SLOTS then
     PlayerFavorites.ensure_favorite_slots_initialized(faves, player.surface.index)

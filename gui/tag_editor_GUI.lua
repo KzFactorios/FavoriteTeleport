@@ -182,6 +182,14 @@ function TagEditorGUI.on_click(event)
   -- ...existing code...
 end
 
+function TagEditorGUI.on_open_tag_editor(event)
+  if not event or not event.player_index then return end
+  ---@diagnostic disable-next-line: undefined-global
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  TagEditorGUI.open(player, player.position, {})
+end
+
 -- When the tag editor is open, ignore clicks outside the tag editor GUI
 -- NOTE: The script.on_event registration must be done in control.lua, not here.
 -- Please register TagEditorGUI.on_click for defines.events.on_gui_click in control.lua.
