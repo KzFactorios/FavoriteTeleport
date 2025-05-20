@@ -83,4 +83,14 @@ function GuiBase.find_by_path(parent, path)
     return current
 end
 
+--- Adds a favorite slot button to the parent GUI element
+-- @param parent LuaGuiElement The parent element to add the button to
+-- @param slot number The slot number (used in the button name and caption)
+-- @param fav table|nil A table containing favorite data, or nil for an empty slot
+-- @return LuaGuiElement The created sprite-button element
+function GuiBase.add_favorite_slot_button(parent, slot, fav)
+  local GuiFactory = require("gui.gui_factory")
+  return GuiFactory.create_favorite_slot(parent, slot, fav)
+end
+
 return GuiBase

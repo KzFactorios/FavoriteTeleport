@@ -11,6 +11,8 @@
 --- @field new fun(player: LuaPlayer, position: MapPosition, chart_tag:LuaCustomChartTag, is_favorite:boolean, description: string): MapTag|nil
 --- @field on_chart_tag_modified fun(event: any)
 --- @field create_chart_tag_from_map_tag fun(player: LuaPlayer, map_tag: MapTag): LuaCustomChartTag|nil
+--- @field teleport_player_with_messaging fun(player: LuaPlayer, position: MapPosition, surface: LuaSurface, raise_teleported?: boolean): string|nil
+--- @field remove_player_index_from_faved_by_players fun(self: MapTag, player_index: uint)
 local MapTag = {}
 
 -- Forward declare all methods to ensure they exist on the MapTag table
@@ -19,9 +21,15 @@ MapTag.is_tag_valid = nil
 MapTag.new = nil
 MapTag.on_chart_tag_modified = nil
 MapTag.create_chart_tag_from_map_tag = nil
+MapTag.teleport_player_with_messaging = nil
+MapTag.remove_player_index_from_faved_by_players = nil
 
 local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
+local MapTagDummy = require("core.map_tag_dummy")
+local Position = require("core.utils.position")
+local Settings = require("settings")
+local Constants = require("constants")
 
 --- Creates a new MapTag instance
 -- @param chart_tag LuaCustomChartTag|nil Optional: The underlying Factorio chart tag object
@@ -32,12 +40,6 @@ function MapTag.new(player, position, chart_tag, is_favorite, description)
   if type(position) ~= "table" or type(position.x) ~= "number" or type(position.y) ~= "number" then
     return nil
   end
-  --[[if position.x == 0 and position.y == 0 then
-    -- Only allow {0,0} if explicitly allowed via description or context (customize as needed)
-    if not (description and description:find("allow_zero_position")) then
-      return nil
-    end
-  end]]
 
   local surface_index = player.surface.index
   local gps = Helpers.map_position_to_gps(position, surface_index)
@@ -58,6 +60,15 @@ function MapTag.new(player, position, chart_tag, is_favorite, description)
   setmetatable(obj, { __index = MapTag })
   ---@cast obj MapTag
   return obj
+end
+
+function MapTag.remove_player_index_from_faved_by_players(self, player_index)
+  if self.faved_by_players and type(self.faved_by_players) == "table" and #self.faved_by_players > 0 then
+    local result, idx = Helpers.index_is_in_table(self.faved_by_players, player_index)
+    if result and result == true then
+      table.remove(self.faved_by_players, idx)
+    end
+  end
 end
 
 function MapTag.is_player_favorite(self, player)
@@ -90,165 +101,84 @@ function MapTag.create_chart_tag_from_map_tag(player, map_tag)
   if not chart_tag then
     -- Only return a dummy table in test environments
     if _G and _G._TEST then
-      ---@type LuaForce
-      local dummy_force = player.force
-      if type(dummy_force) ~= "table" or not rawget(dummy_force, "name") then
-        dummy_force = {
-          name = "test-force",
-          object_name = "LuaForce",
-          add_chart_tag = function() return {} end,
-          valid = true,
-          print = function() end,
-          -- Add all other required fields as dummies for strict type checking
-          ai_controllable = true,
-          artillery_range_modifier = 0,
-          beacon_distribution_modifier = 0,
-          belt_stack_size_bonus = 0,
-          bulk_inserter_capacity_bonus = 0,
-          character_build_distance_bonus = 0,
-          character_health_bonus = 0,
-          character_inventory_slots_bonus = 0,
-          character_item_drop_distance_bonus = 0,
-          character_item_pickup_distance_bonus = 0,
-          character_logistic_requests = true,
-          character_loot_pickup_distance_bonus = 0,
-          character_reach_distance_bonus = 0,
-          character_resource_reach_distance_bonus = 0,
-          character_running_speed_modifier = 0,
-          character_trash_slot_count = 0,
-          circuit_network_enabled = true,
-          cliff_deconstruction_enabled = true,
-          color = {r=1,g=1,b=1,a=1},
-          connected_players = {},
-          create_ghost_on_entity_death = true,
-          deconstruction_time_to_live = 0,
-          following_robots_lifetime_modifier = 0,
-          friendly_fire = true,
-          index = 1,
-          inserter_stack_size_bonus = 0,
-          items_launched = {},
-          laboratory_productivity_bonus = 0,
-          laboratory_speed_modifier = 0,
-          logistic_networks = {},
-          manual_crafting_speed_modifier = 0,
-          manual_mining_speed_modifier = 0,
-          max_failed_attempts_per_tick_per_construction_queue = 0,
-          max_successful_attempts_per_tick_per_construction_queue = 0,
-          maximum_following_robot_count = 0,
-          mining_drill_productivity_bonus = 0,
-          mining_with_fluid = true,
-          platforms = {},
-          players = {},
-          rail_planner_allow_elevated_rails = true,
-          rail_support_on_deep_oil_ocean = true,
-          recipes = {},
-          research_enabled = true,
-          research_progress = 0,
-          research_queue = {},
-          rockets_launched = 0,
-          share_chart = true,
-          technologies = {},
-          train_braking_force_bonus = 0,
-          vehicle_logistics = true,
-          worker_robots_battery_modifier = 0,
-          worker_robots_speed_modifier = 0,
-          worker_robots_storage_bonus = 0,
-          -- Add all required methods as no-ops
-          add_research = function() end,
-          cancel_charting = function() end,
-          cancel_current_research = function() end,
-          chart = function() end,
-          chart_all = function() end,
-          clear_chart = function() end,
-          copy_chart = function() end,
-          copy_from = function() end,
-          create_space_platform = function() end,
-          disable_all_prototypes = function() end,
-          disable_research = function() end,
-          enable_all_prototypes = function() end,
-          enable_all_recipes = function() end,
-          enable_all_technologies = function() end,
-          enable_research = function() end,
-          find_chart_tags = function() return {} end,
-          find_logistic_network_by_position = function() end,
-          get_ammo_damage_modifier = function() return 0 end,
-          get_cease_fire = function() return false end,
-          get_entity_build_count_statistics = function() return {} end,
-          get_entity_count = function() return 0 end,
-          get_evolution_factor = function() return 0 end,
-          get_evolution_factor_by_killing_spawners = function() return 0 end,
-          get_evolution_factor_by_pollution = function() return 0 end,
-          get_evolution_factor_by_time = function() return 0 end,
-          get_fluid_production_statistics = function() return {} end,
-          get_friend = function() return false end,
-          get_gun_speed_modifier = function() return 0 end,
-          get_hand_crafting_disabled_for_recipe = function() return false end,
-          get_item_launched = function() return 0 end,
-          get_item_production_statistics = function() return {} end,
-          get_kill_count_statistics = function() return {} end,
-          get_linked_inventory = function() return {} end,
-          get_spawn_position = function() return {x=0,y=0} end,
-          get_surface_hidden = function() return false end,
-          get_turret_attack_modifier = function() return 0 end,
-          is_chunk_charted = function() return false end,
-          is_chunk_requested_for_charting = function() return false end,
-          is_chunk_visible = function() return false end,
-          is_enemy = function() return false end,
-          is_friend = function() return false end,
-          is_pathfinder_busy = function() return false end,
-          is_quality_unlocked = function() return false end,
-          is_space_location_unlocked = function() return false end,
-          is_space_platforms_unlocked = function() return false end,
-          kill_all_units = function() end,
-          lock_quality = function() end,
-          lock_space_location = function() end,
-          lock_space_platforms = function() end,
-          play_sound = function() end,
-          rechart = function() end,
-          research_all_technologies = function() end,
-          reset = function() end,
-          reset_evolution = function() end,
-          reset_recipes = function() end,
-          reset_technologies = function() end,
-          reset_technology_effects = function() end,
-          set_ammo_damage_modifier = function() end,
-          set_cease_fire = function() end,
-          set_evolution_factor = function() end,
-          set_evolution_factor_by_killing_spawners = function() end,
-          set_evolution_factor_by_pollution = function() end,
-          set_evolution_factor_by_time = function() end,
-          set_friend = function() end,
-          set_gun_speed_modifier = function() end,
-          set_hand_crafting_disabled_for_recipe = function() end,
-          set_item_launched = function() end,
-          set_spawn_position = function() end,
-          set_surface_hidden = function() end,
-          set_turret_attack_modifier = function() end,
-          unchart_chunk = function() end,
-          unlock_quality = function() end,
-          unlock_space_location = function() end,
-          unlock_space_platforms = function() end
-        }
-      end
-      ---@cast dummy_force LuaForce
-      local dummy_chart_tag = {
-        valid = true,
-        position = pos,
-        text = map_tag.gps,
-        last_user = player, -- LuaPlayer?
-        force = dummy_force,
-        icon = { type = "item", name = "iron-plate" }, -- dummy SignalID
-        object_name = "LuaCustomChartTag",
-        surface = player.surface,
-        tag_number = 1,
-        print = function() end,
-        destroy = function() end
-      }
-      return dummy_chart_tag
+      return MapTagDummy.get_dummy_chart_tag(map_tag, player, pos)
     end
     return nil
   end
   return chart_tag
+end
+
+--- Wrapper for player.teleport
+--- note that caller is currently handling raising of teleport event
+-- @param player LuaPlayer
+-- @param position MapPosition
+-- @param surface LuaSurface|string|nil
+-- @param raise_teleported boolean|nil
+-- @returns string -- successful teleport returns constants.enums.return_state.SUCCESS
+function MapTag.teleport_player_with_messaging(player, position, surface, raise_teleported)
+  -- Defensive checks for valid player and surface
+  if not player or not player.valid or type(player.teleport) ~= "function" then
+    return "Unable to teleport. Player is missing"
+  end
+  if not surface then surface = player.surface end
+  if not surface or type(surface.find_non_colliding_position) ~= "function" then
+    return "Unable to teleport. Surface is missing"
+  end
+  -- Only allow teleport if player.character is present (Factorio API)
+  if rawget(player, "character") == nil then
+    return "Unable to teleport. Player character is missing"
+  end
+
+  -- Space platform check
+  if Position.is_on_space_platform and Position.is_on_space_platform(player) then
+    return
+    "The insurance general has determined that teleporting on a space platform could result in injury or death, or both, and has outlawed the practice."
+  end
+
+  -- Get settings
+  local settings = Settings.getPlayerSettings and Settings:getPlayerSettings(player) or { teleport_radius = 8 }
+  local teleport_radius = settings.teleport_radius or 8
+
+  -- Use the default prototype name for collision search
+  local proto_name = "character"
+  -- Find a non-colliding position near the target position
+  local closest_position = surface.find_non_colliding_position(proto_name, position, teleport_radius, 4)
+  if not closest_position then
+    return
+    "The location you have chosen is too dense for teleportation. You may try to adjust the settings for teleport radius, but generally you should try a different location."
+  end
+
+  -- Water tile check
+  if Position.is_water_tile(surface, closest_position) then
+    return
+    "You cannot teleport onto water. Ages ago, this practice was allowed and many agents were lost as they were teleported to insurvivable depths. Please select a land location."
+  end
+
+  -- Check if the position is valid for placing the player
+  if not surface.can_place_entity or not surface.can_place_entity("character", closest_position) then
+    return "The player cannot be placed at this location. Try another location."
+  end
+
+  local teleport_AOK = false
+
+  -- Vehicle teleportation: In Factorio, teleporting a vehicle does NOT move the player with it automatically.
+  -- To ensure the player stays inside the vehicle, you must teleport the vehicle first, then the player.
+  local vehicle = player.vehicle or nil
+  if vehicle then
+    vehicle.teleport(closest_position, surface,
+      raise_teleported and raise_teleported == true or false)
+    teleport_AOK = player.teleport(closest_position, surface,
+      raise_teleported and raise_teleported == true or false)
+  else
+    teleport_AOK = player.teleport(closest_position, surface,
+      raise_teleported and raise_teleported == true or false)
+  end
+
+  -- A succeful teleport!
+  if teleport_AOK then return Constants.enums.return_state.SUCCESS end
+
+  -- Fallback error
+  return "We were unable to perform the teleport due to unforeseen circumstances"
 end
 
 MapTag.get_text = MapTag.get_text
@@ -256,5 +186,7 @@ MapTag.is_tag_valid = MapTag.is_tag_valid
 MapTag.new = MapTag.new
 MapTag.on_chart_tag_modified = MapTag.on_chart_tag_modified
 MapTag.create_chart_tag_from_map_tag = MapTag.create_chart_tag_from_map_tag
+MapTag.teleport_player_with_messaging = MapTag.teleport_player_with_messaging
+MapTag.remove_player_index_from_faved_by_players = MapTag.remove_player_index_from_faved_by_players
 
 return MapTag

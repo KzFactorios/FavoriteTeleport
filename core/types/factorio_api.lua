@@ -36,6 +36,7 @@
 --- @field surface LuaSurface
 --- @field valid boolean
 --- @field print fun(msg: string)
+--- @field destroy fun()
 --- Factorio API: https://lua-api.factorio.com/latest/classes/LuaCustomChartTag.html
 --- Represents a custom chart tag in Factorio
 --- 

@@ -20,8 +20,15 @@ function Favorite.new(gps, slot_locked)
 end
 
 --- Returns the map_tag for this favorite (from storage for this surface)
-function Favorite:get_map_tag()
-  return Storage.find_map_tag_by_gps(self.gps)
+function Favorite:get_map_tag(player)
+  -- player is optional, but can be used for surface context if needed
+  return Storage.find_map_tag_by_gps(player or nil, self.gps)
+end
+
+--- Returns the chart_tag for this favorite (from storage for this surface)
+function Favorite:get_chart_tag(player)
+  -- player is optional, but can be used for surface context if needed
+  return Storage.find_chart_tag_by_gps(player or nil, self.gps)
 end
 
 return Favorite

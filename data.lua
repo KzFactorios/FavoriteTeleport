@@ -28,7 +28,7 @@ data:extend {
     height = 32,
     x = 0,
     y = 0,
-    flags = {"icon"}
+    flags = { "icon" }
   },
   {
     type = "custom-input",
@@ -104,20 +104,19 @@ data:extend {
     name = Constants.events.STORAGE_DUMP,
     type = "custom-input",
     key_sequence = "CONTROL + F12",
-    consuming = "none",
     order = "zz"
   },
   {
     name = Constants.events.ON_OPEN_TAG_EDITOR,
     type = "custom-input",
     key_sequence = "mouse-button-2",
-    consuming = "none",
+    consumin="game-only",
     order = "zz"
   },
   {
     type = "custom-input",
     name = "ft-dev-dump-chart-tags",
     key_sequence = "CONTROL + F9",
-    consuming = "none"
+    order = "zz"
   }
 }

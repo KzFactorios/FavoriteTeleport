@@ -29,4 +29,11 @@ constants.settings = {
   SNAP_SCALE_FOR_CLICKED_TAG = 4
 }
 
+constants.enums = {
+  return_state = {
+    SUCCESS = "sucess",
+    FAILURE = "failure"
+  }
+}
+
 return constants
