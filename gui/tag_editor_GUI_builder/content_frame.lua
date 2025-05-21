@@ -28,7 +28,7 @@ function ContentFrame.build(parent, builder)
     })
 
   local available_slots = Storage.get_available_favorite_slots_count(builder.player)
-  local faved = builder.map_tag and builder.map_tag:is_player_favorite(builder.player)
+  local faved = builder.map_tag and builder.map_tag:is_player_favorite(builder.player) or false
   local favorite_enabled = (available_slots > 0) or faved
 
   Rows.add_row(content_frame, "ft_tag_editor_favorite_row", { "ft_tag_editor_favorite_label" },

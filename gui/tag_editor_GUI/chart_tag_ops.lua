@@ -5,6 +5,8 @@ local ChartTagOps = {}
 local Storage = require("core.storage")
 local Helpers = require("core.utils.helpers")
 local MapTag = require("core.map_tag")
+local Constants = require("constants")
+local FavoriteSlots = require("core.utils.favorite_slots")
 
 function ChartTagOps.find_create_chart_tag_on_confirm(player, gps, input)
   local chart_tag = Storage.find_chart_tag_by_gps(player, gps)
@@ -20,7 +22,7 @@ function ChartTagOps.find_create_chart_tag_on_confirm(player, gps, input)
       player.print { "FavoriteTeleport.ft_tag_editor_error_chart_tag_failed" }
       return nil
     end
-  elseif chart_tag.last_user == player.name then
+  elseif chart_tag.last_user.name == player.name then
     chart_tag.icon = input.icon or {}
     chart_tag.text = input.text
     chart_tag.last_user = player.name
@@ -41,12 +43,40 @@ function ChartTagOps.find_create_map_tag_on_confirm(player, gps, chart_tag, inpu
     map_tag = MapTag.new(player, simple_position, safe_chart_tag, is_favorite)
   else
     map_tag.gps = gps
+    map_tag.created_by = player.name
   end
+
   if map_tag then
     map_tag.faved_by_players = map_tag.faved_by_players or {}
-    if is_favorite then
-      map_tag.add_player_to_faved_by_players(map_tag, player)
+
+    local player_favorites = Storage.get_player_favorites(player)
+    local found_fave, _ = FavoriteSlots.find_favorite_by_gps(player_favorites, gps)
+    local count = Storage.get_available_favorite_slots_count()
+
+    if is_favorite and count < Constants.MAX_FAVORITE_SLOTS then
+      MapTag.add_player_to_faved_by_players(map_tag, player)
+      if not found_fave then
+        for _, fave in pairs(player_favorites) do
+          if fave.gps == "" then
+            fave = {
+              gps = gps,
+              slot_locked = false
+            }
+            break
+          end
+        end
+      end
+    else                          -- not a favorite
+      MapTag.remove_player_index_from_faved_by_players(map_tag, player.index)
+      if found_fave ~= nil then   -- if not a favorite
+        -- reset the found_fave
+        found_fave = {
+          gps = "",
+          slot_locked = false
+        }
+      end
     end
+
     Storage.add_or_update_map_tag(player, map_tag)
   end
   return map_tag
@@ -55,6 +85,7 @@ end
 --- position is read-only, so if we need to change the position,
 --- delete the old and make a new one
 function ChartTagOps.update_chart_tag(player, chart_tag, input, map_position)
+  if not player or not chart_tag then return end
   local changed = false
 
   if (chart_tag.position.x ~= map_position.x or chart_tag.position.y ~= map_position.y) then
@@ -79,12 +110,12 @@ function ChartTagOps.update_chart_tag(player, chart_tag, input, map_position)
     changed = true
   end
 
-  if chart_tag.last_user ~= player.name then
+  if chart_tag.last_user and chart_tag.last_user.name ~= player.name then
     chart_tag.last_user = player.name
     changed = true
   end
 
----@diagnostic disable-next-line: unnecessary-if
+  ---@diagnostic disable-next-line: unnecessary-if
   if changed == true then
     Storage.reset_cached_chart_tags(player.surface.index)
     chart_tag = Storage.find_chart_tag_by_gps(player,

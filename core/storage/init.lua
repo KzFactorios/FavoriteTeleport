@@ -102,11 +102,9 @@ function StorageInit.add_or_update_map_tag(player, map_tag)
       return
     end
   end
-
   --if not found then--
   -- Remove any runtime object references before storing
   if map_tag.tag then map_tag.tag = nil end
-
   table.insert(map_tags, map_tag)
 end
 
@@ -203,7 +201,7 @@ function StorageInit.rehome_chart_tag(player, chart_tag, gps)
     position = new_pos,
     icon = chart_tag.icon,
     text = chart_tag.text,
-    last_user = chart_tag.last_user,
+    last_user = chart_tag.last_user and chart_tag.last_user.name or "",
     -- Add any other fields you want to copy
   }
   local new_chart_tag = player.force.add_chart_tag(surface, tag_spec)

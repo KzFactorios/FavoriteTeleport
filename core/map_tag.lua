@@ -64,7 +64,7 @@ function MapTag.new(player, position, chart_tag, is_favorite)
 end
 
 function MapTag.add_player_to_faved_by_players(self, player)
-  if self.faved_by_players and type(self.faved_by_players) == "table" and #self.faved_by_players > 0 then
+  if self.faved_by_players and type(self.faved_by_players) == "table" and Storage.get_available_favorite_slots_count(player) > 0 then
     local faved_bys = self.faved_by_players or {}
     local result, idx = Helpers.index_is_in_table(self.faved_by_players, player.index)
     if not (result and result == true) then

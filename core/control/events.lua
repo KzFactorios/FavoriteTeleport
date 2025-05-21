@@ -46,23 +46,24 @@ function Events.register()
   end)
 
   -- Register custom ESC input for GUI stack
-  script.on_event("ft_gui_stack_esc", function(event)
-    local player = game.get_player(event.player_index)
-    if not player then return end
-    local stack = global.FavoriteTeleport and global.FavoriteTeleport.players and global.FavoriteTeleport.players[player.index] and global.FavoriteTeleport.players[player.index].gui_stack or nil
-    if stack and #stack > 0 then
-      local top = stack[#stack]
-      -- Close the top GUI (add more cases as you add more GUIs)
-      if top == "tag_editor" then
-        require("gui.tag_editor_GUI").close(player)
-      end
-      -- Remove the top GUI from the stack
-      table.remove(stack)
-      -- Consume ESC (do not let vanilla handle it)
-      return
-    end
-    -- If stack is empty, let vanilla handle ESC (game menu or chart view closes)
-  end)
+  -- REMOVE this handler to restore vanilla ESC behavior
+  -- script.on_event("ft_gui_stack_esc", function(event)
+  --   local player = game.get_player(event.player_index)
+  --   if not player then return end
+  --   local stack = global.FavoriteTeleport and global.FavoriteTeleport.players and global.FavoriteTeleport.players[player.index] and global.FavoriteTeleport.players[player.index].gui_stack or nil
+  --   if stack and #stack > 0 then
+  --     local top = stack[#stack]
+  --     -- Close the top GUI (add more cases as you add more GUIs)
+  --     if top == "tag_editor" then
+  --       require("gui.tag_editor_GUI").close(player)
+  --     end
+  --     -- Remove the top GUI from the stack
+  --     table.remove(stack)
+  --     -- Consume ESC (do not let vanilla handle it)
+  --     return
+  --   end
+  --   -- If stack is empty, let vanilla handle ESC (game menu or chart view closes)
+  -- end)
 
   -- Register text changed for tag editor text and desc fields
   script.on_event(defines.events.on_gui_text_changed, function(event)
@@ -74,19 +75,7 @@ function Events.register()
     TagEditorGUI.on_elem_changed(event)
   end)
 
-  -- Register confirm (E) key for tag editor
-  script.on_event("ft_tag_editor_confirm", function(event)
-    local player = game.get_player(event.player_index)
-    if not player then return end
-    local frame = player.gui.screen["ft_tag_editor_outer_frame"]
-    if frame then
-      TagEditorGUI.handle_confirm(player)
-      TagEditorGUI.close(player)
-      return
-    end
-    -- If tag editor is not open, simulate vanilla E (open inventory)
-    player.opened = defines.gui_type.controller
-  end)
+
 end
 
 return Events

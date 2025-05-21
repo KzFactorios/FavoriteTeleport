@@ -119,19 +119,4 @@ data:extend {
     key_sequence = "CONTROL + F9",
     order = "zz"
   },
-  {
-    type = "custom-input",
-    name = "ft_gui_stack_esc",
-    key_sequence = "ESCAPE",
-    consuming = "game-only",
-    order = "zz1"
-  },
-  {
-    type = "custom-input",
-    name = "ft_tag_editor_confirm",
-    key_sequence = "E",
-    consuming = "game-only",
-    order = "zz2"
-  },
-  
 }

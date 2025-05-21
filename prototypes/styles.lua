@@ -47,25 +47,6 @@ gui_style.te_tr_text_label = {
   maximal_width = 120
 }
 
-gui_style.te_tr_desc_label = {
-  type = "label_style",
-  parent = "label",
-  single_line = true,
-  horizontally_stretchable = "off",
-  vertically_stretchable = "off",
-  font = "default-bold",
-  minimal_width = 120,
-  maximal_width = 120
-}
-
-gui_style.te_tr_teleport_button = {
-  type = "button_style",
-  parent = "red_button",
-  minimal_width = 180,
-  maximal_width = 180,
-  horizontally_stretchable = "off",
-}
-
 -- Custom save/teleport button style (fixed width, confirm appearance)
 gui_style.ft_confirm_button = {
   type = "button_style",
@@ -127,34 +108,6 @@ gui_style.ft_descfield = {
   horizontally_stretchable = "off"
 }
 
--- top row flow style
--- (removed duplicate ft_descfield definition)
-
--- Custom style for the tag editor top row (last user row)
-gui_style.ft_tag_editor_top_row_frame = {
-  type = "frame_style",
-  graphical_set = {
-    base = {
-      position = {17, 0},
-      corner_size = 8,
-      center = {width = 1, height = 1, tint = { r = 0.4, g = 0.4, b = 0.4, a = 1.0 }},
-      draw_type = "outer"
-    }
-  },
-  left_padding = 8,
-  right_padding = 8,
-  top_padding = 4,
-  bottom_padding = 8,
-  font = "default-bold",
-  horizontally_stretchable = "on",
-  width = 0,             
-  maximal_width = 0,
-  border = { base = { center = { width = 1, height = 1, tint = { r = 0.4, g = 0.4, b = 0.4, a = 1.0 } } } }   
-}
-
-gui_style.ft_tag_editor_top_row = {
-  type = "horizontal_flow_style",
-}
 
 gui_style.te_tr_error_label = {
   type = "label_style",
@@ -164,10 +117,83 @@ gui_style.te_tr_error_label = {
   single_line = false,
   horizontally_stretchable = "on",
   vertically_stretchable = "off",
-  maximal_width = 400,
-  minimal_width = 120,
   top_padding = 2,
   bottom_padding = 2,
   left_padding = 4,
   right_padding = 4,
+}
+
+
+
+--- TOP ROW (last user row)
+gui_style.te_tr_top_row_frame = {
+  type = "frame_style",
+  parent = "frame",
+  graphical_set = {
+    base = {
+      position = {0, 0},
+      corner_size = 8, -- FIX: use corner_size, not corner
+      draw_type = "outer",
+      tint = { r = 0.25, g = 0.25, b = .25, a = 1 }
+    }
+  }
+}
+
+gui_style.te_tr_last_user_label_container = {
+  type = "frame_style",
+  parent = "invisible_frame"
+}
+
+gui_style.te_tr_last_user_action_container = {
+  type = "frame_style",
+  parent = "invisible_frame",
+}
+
+gui_style.te_tr_move_button_container = {
+  type = "frame_style",
+  parent = "invisible_frame",
+}
+
+gui_style.te_tr_delete_button_container = {
+  type = "frame_style",
+  parent = "invisible_frame",
+}
+
+gui_style.te_tr_move_button = {
+  type = "button_style",
+  parent = "slot_button"
+}
+
+
+gui_style.te_tr_delete_button = {
+  type = "button_style",
+  parent = "slot_button",
+  default_graphical_set = {
+    base = {
+      position = { 136, 0 }, -- red slot background from vanilla sprite sheet
+      corner_size = 8,
+      draw_type = "outer"
+    }
+  },
+  hovered_graphical_set = {
+    base = {
+      position = { 170, 0 }, -- red slot hover background
+      corner_size = 8,
+      draw_type = "outer"
+    }
+  },
+  clicked_graphical_set = {
+    base = {
+      position = { 204, 0 }, -- red slot pressed background
+      corner_size = 8,
+      draw_type = "outer"
+    }
+  },
+  disabled_graphical_set = {
+    base = {
+      position = { 238, 0 }, -- red slot disabled background
+      corner_size = 8,
+      draw_type = "outer"
+    }
+  }
 }

@@ -33,28 +33,13 @@ end
 
 function FavoriteSlots.format_favorite_tooltip(fav)
   if not fav or not fav.gps or fav.gps == "" then return "Empty favorite slot" end
-  local tooltip = FavoriteSlots.map_position_to_pos_string(fav.gps)
+  local Helpers = require("core.utils.helpers")
+  local tooltip = Helpers.map_position_to_pos_string(fav.gps)
   if fav and fav.map_tag ~= nil and type(fav.map_tag) == "table" and fav.map_tag.text ~= nil and fav.map_tag.text ~= "" then
     tooltip = tooltip .. "\n" .. fav.map_tag.text
   end
   return tooltip
 end
 
-function FavoriteSlots.map_position_to_pos_string(map_pos)
-  if type(map_pos) == "string" then
-    local x_str, y_str = map_pos:match("([%-?%d]+)%.([%-?%d]+)")
-    if not x_str or not y_str then return nil end
-    local x = tonumber(x_str)
-    local y = tonumber(y_str)
-    if not x or not y then return nil end
-    map_pos = { x = x, y = y }
-  end
-  if type(map_pos) ~= "table" or type(map_pos.x) ~= "number" or type(map_pos.y) ~= "number" then return nil end
-  local function pad(n)
-    local sign = n < 0 and "-" or ""
-    return string.format("%s%03d", sign, math.abs(Position.math_round(n)))
-  end
-  return string.format("%s.%s", pad(map_pos.x), pad(map_pos.y))
-end
 
 return FavoriteSlots

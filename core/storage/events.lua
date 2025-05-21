@@ -61,7 +61,7 @@ function StorageEvents.on_player_left_game(player_index, player_name)
     -- Collect chart tags to update and destroy
     local matching_tags = chart_tag_gps_map[gps] or {}
     for _, chart_tag in pairs(matching_tags) do
-      if chart_tag.last_user == player_name then
+      if chart_tag.valid and chart_tag.last_user and chart_tag.last_user.name == player_name then
         table.insert(chart_tags_to_update, chart_tag)
       end
       -- If this chart tag matches a soon-to-be-deleted map tag, mark for destruction

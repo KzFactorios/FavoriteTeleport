@@ -13,3 +13,4 @@
 - [ ] Check for map editor functionality
 - [ ] When a chart_tag is destroyed, it should destroy any linked map_tags
 - [ ] When a map_tag is destroyed, it should destroy any linked chart_tags
+- [ ] Multiplayer: play around with ownership of tags

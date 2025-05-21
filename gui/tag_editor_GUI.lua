@@ -78,12 +78,11 @@ function TagEditorGUI.handle_action(player, action)
   if not frame then return end
 
   local surface = player.surface
-  local surface_index = surface.index
-  local player_index = player.index
 
   if action == "confirm" then
     TagEditorGUI.handle_confirm(player)
   elseif action == "delete" then
+    if player and player.print then player.print("[FavoriteTeleport] Delete call") end
     local gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
     -- Use the new storage method to destroy the chart tag and remove from storage
     local destroyed = Storage.destroy_chart_tag(player, gps)
@@ -138,7 +137,7 @@ function TagEditorGUI.update_save_btn(player)
   -- Enable if either text is non-empty or icon is selected
   save_btn.enabled = (text_val ~= "") or icon_selected
   if save_btn.enabled then
-    save_btn.tooltip = ""
+    save_btn.tooltip = "Confirm"
   else
     save_btn.tooltip = { "ft_tag_editor_save_tooltip" }
   end

@@ -148,7 +148,7 @@ function TagEditorGUIBuilderClass:build_content_frame()
   frame.style.padding = 0
 
   -- Top row (last user, move/delete)
-  TopRow.build(frame, self.player, self.context)
+  TopRow:build( frame, self.player, self.chart_tag)
 
   -- Main content rows (teleport, favorite, icon, text, desc)
   ContentFrame.build(frame, self)
@@ -162,7 +162,7 @@ function TagEditorGUIBuilderClass:build_action_row()
 end
 
 function TagEditorGUIBuilderClass:finalize()
-  self.player.opened = self.outer_frame
+  self.player.opened = self.outer_frame -- Ensure ESC closes the tag editor
   if self.outer_frame.force_auto_center then
     self.outer_frame.force_auto_center()
   end
@@ -183,6 +183,7 @@ function TagEditorGUIBuilder.open(player, position, context)
   if tag_editor_gui_module and type(tag_editor_gui_module.update_save_btn) == "function" then
     local _ok, _err = pcall(tag_editor_gui_module.update_save_btn, player)
   end
+  builder:finalize() -- Ensure ESC closes the tag editor
   return builder
 end
 
@@ -191,6 +192,7 @@ function TagEditorGUIBuilder.close(player)
   if gui.ft_tag_editor_outer_frame then
     gui.ft_tag_editor_outer_frame.destroy()
   end
+  player.opened = nil -- Ensure vanilla ESC/game menu works when no dialogs are open
 end
 
 return TagEditorGUIBuilder
