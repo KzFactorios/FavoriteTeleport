@@ -59,15 +59,13 @@ function ContentFrame.build(parent, builder)
     style = "ft_textfield"
   }, { top_margin = 8 })
 
-  Rows.add_row(content_frame, "ft_tag_editor_desc_row", { "ft_tag_editor_desc" }, "te_tr_desc_label", {
-    type = "textfield",
-    name = "ft_tag_editor_descbox",
-    text = builder.map_tag and builder.map_tag.description or "",
-    clear_and_focus_on_right_click = true,
-    tooltip = { "ft_tag_editor_desc_tooltip" },
-    numeric = false,
-    allow_blank = true,
-    style = "ft_descfield"
+  -- Error label row (hidden by default)
+  local error_row = Rows.add_row(content_frame, "ft_tag_editor_error_row", { "ft_tag_editor_error_label" }, "te_tr_error_label", {
+    type = "label",
+    name = "ft_tag_editor_error_label",
+    caption = "",
+    style = "label",
+    visible = false
   }, { top_margin = 8 })
 
   return content_frame

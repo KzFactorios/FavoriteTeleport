@@ -1,28 +1,30 @@
 --- @class MapTag
 --- Represents a map tag object for FavoriteTeleport mod
 --- @field gps string The position string (e.g., "000.-1350")
---- @field chart_tag LuaCustomChartTag|nil The underlying Factorio chart tag object
+--- @field get_chart_tag fun(self:MapTag):LuaCustomChartTag|nil The underlying Factorio chart tag object
 --- @field created_by string The player index who created the tag
---- @field description string|nil Additional text for the tag
 --- @field faved_by_players uint[]
 --- @field is_player_favorite fun(self: MapTag, player: LuaPlayer): boolean
 --- @field get_text fun(self: MapTag): string|nil The text for the tag
 --- @field is_tag_valid fun(self: MapTag):boolean
---- @field new fun(player: LuaPlayer, position: MapPosition, chart_tag:LuaCustomChartTag, is_favorite:boolean, description: string): MapTag|nil
+--- @field new fun(player: LuaPlayer, position: MapPosition, chart_tag:LuaCustomChartTag, is_favorite:boolean): MapTag|nil
 --- @field on_chart_tag_modified fun(event: any)
 --- @field create_chart_tag_from_map_tag fun(player: LuaPlayer, map_tag: MapTag): LuaCustomChartTag|nil
 --- @field teleport_player_with_messaging fun(player: LuaPlayer, position: MapPosition, surface: LuaSurface, raise_teleported?: boolean): string|nil
 --- @field remove_player_index_from_faved_by_players fun(self: MapTag, player_index: uint)
+--- @field add_player_to_faved_by_players fun(self:MapTag, player:LuaPlayer):boolean
 local MapTag = {}
 
 -- Forward declare all methods to ensure they exist on the MapTag table
 MapTag.get_text = nil
+MapTag.get_chart_tag = nil
 MapTag.is_tag_valid = nil
 MapTag.new = nil
 MapTag.on_chart_tag_modified = nil
 MapTag.create_chart_tag_from_map_tag = nil
 MapTag.teleport_player_with_messaging = nil
 MapTag.remove_player_index_from_faved_by_players = nil
+MapTag.add_player_to_faved_by_players = nil
 
 local Helpers = require("core.utils.helpers")
 local Storage = require("core.storage")
@@ -33,7 +35,7 @@ local Constants = require("constants")
 
 --- Creates a new MapTag instance
 -- @param chart_tag LuaCustomChartTag|nil Optional: The underlying Factorio chart tag object
-function MapTag.new(player, position, chart_tag, is_favorite, description)
+function MapTag.new(player, position, chart_tag, is_favorite)
   if not player then return nil end
 
   -- Validate position: do not allow {x=0, y=0} unless explicitly intended
@@ -51,15 +53,26 @@ function MapTag.new(player, position, chart_tag, is_favorite, description)
 
   local obj = {
     gps = gps,
-    chart_tag = chart_tag, -- can be nil
+    chart_tag = chart_tag,    -- can be nil
     faved_by_players = faved_by_players or {},
-    description = description,
     created_by = player.name, -- Always use player.name for created_by (not index)
   }
 
   setmetatable(obj, { __index = MapTag })
   ---@cast obj MapTag
   return obj
+end
+
+function MapTag.add_player_to_faved_by_players(self, player)
+  if self.faved_by_players and type(self.faved_by_players) == "table" and #self.faved_by_players > 0 then
+    local faved_bys = self.faved_by_players or {}
+    local result, idx = Helpers.index_is_in_table(self.faved_by_players, player.index)
+    if not (result and result == true) then
+      table.insert(faved_bys, player.index)
+      return true
+    end
+  end
+  return false
 end
 
 function MapTag.remove_player_index_from_faved_by_players(self, player_index)
@@ -71,6 +84,20 @@ function MapTag.remove_player_index_from_faved_by_players(self, player_index)
   end
 end
 
+function MapTag.get_text(self)
+  local ct = self.get_chart_tag(self)
+  return ct and ct.text or nil
+end
+
+--- @returns LuaCustomChartTag|nil
+function MapTag.get_chart_tag(self)
+  local found = Storage.find_chart_tag_by_gps(self.gps)
+  if found and type(found) == "table" then
+    return found
+  end
+  return nil
+end
+
 function MapTag.is_player_favorite(self, player)
   if not self or not self.faved_by_players then return false end
   for _, idx in ipairs(self.faved_by_players) do
@@ -80,8 +107,8 @@ function MapTag.is_player_favorite(self, player)
 end
 
 function MapTag.is_tag_valid(self)
-  if not self or not self.chart_tag then return false end
-  return self.chart_tag.valid == true
+  local ct = self.get_chart_tag(self)
+  return ct and ct.valid or false
 end
 
 -- handle changes from the stock tag editor
@@ -96,6 +123,7 @@ function MapTag.create_chart_tag_from_map_tag(player, map_tag)
     text = map_tag.gps,
     last_user = player.name
   }
+
   local chart_tag = player.force.add_chart_tag(player.surface, chart_tag_spec)
   Storage.reset_cached_chart_tags(player.surface.index)
   if not chart_tag then
@@ -182,11 +210,13 @@ function MapTag.teleport_player_with_messaging(player, position, surface, raise_
 end
 
 MapTag.get_text = MapTag.get_text
+MapTag.get_chart_tag = MapTag.get_chart_tag
 MapTag.is_tag_valid = MapTag.is_tag_valid
 MapTag.new = MapTag.new
 MapTag.on_chart_tag_modified = MapTag.on_chart_tag_modified
 MapTag.create_chart_tag_from_map_tag = MapTag.create_chart_tag_from_map_tag
 MapTag.teleport_player_with_messaging = MapTag.teleport_player_with_messaging
 MapTag.remove_player_index_from_faved_by_players = MapTag.remove_player_index_from_faved_by_players
+MapTag.add_player_to_faved_by_players = MapTag.add_player_to_faved_by_players
 
 return MapTag

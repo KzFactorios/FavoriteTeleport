@@ -30,31 +30,23 @@ function FavoriteOps.update_favorite(player, gps, slot_locked)
   for _, other in pairs(_G.game.players) do
     local map_tag = Storage.find_map_tag_by_gps(other, gps)
     if map_tag then
-      map_tag.faved_by_players = map_tag.faved_by_players or {}
-      local is_in = false
-      for _, idx in ipairs(map_tag.faved_by_players) do
-        if idx == player.index then is_in = true; break end
-      end
-      table.insert(map_tag.faved_by_players, player.index)
-      Storage.add_or_update_map_tag(other, map_tag)
+      MapTag.add_player_to_faved_by_players(map_tag, player)
     end
   end
-  -- Always ensure all slots are initialized after any change
-  Storage.ensure_favorite_slots_initialized(favorites, player.surface.index)
 end
 
 function FavoriteOps.remove_favorite(player, gps)
   local favorites = Storage.get_player_favorites(player)
   for i, fav in ipairs(favorites) do
     if fav and fav.gps == gps then
-      favorites[i] = nil
+      favorites[i] = {
+        gps = "",
+        slot_locked = false
+      }
       break
     end
   end
 
-  -- Ensure the favorites array is always filled to MAX_FAVORITE_SLOTS
-  Storage.ensure_favorite_slots_initialized(player)
-  
   -- Update all map_tags for all players if this favorite affects shared tags
   for _, other in pairs(_G.game.players) do
     local map_tag = Storage.find_map_tag_by_gps(other, gps)

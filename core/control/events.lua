@@ -73,6 +73,20 @@ function Events.register()
   script.on_event(defines.events.on_gui_elem_changed, function(event)
     TagEditorGUI.on_elem_changed(event)
   end)
+
+  -- Register confirm (E) key for tag editor
+  script.on_event("ft_tag_editor_confirm", function(event)
+    local player = game.get_player(event.player_index)
+    if not player then return end
+    local frame = player.gui.screen["ft_tag_editor_outer_frame"]
+    if frame then
+      TagEditorGUI.handle_confirm(player)
+      TagEditorGUI.close(player)
+      return
+    end
+    -- If tag editor is not open, simulate vanilla E (open inventory)
+    player.opened = defines.gui_type.controller
+  end)
 end
 
 return Events

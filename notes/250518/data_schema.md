@@ -10,6 +10,9 @@ Defines the persistent data structures for the mod, including player favorites, 
 ```lua
 storage = {
   mod_version = "0.0.01",
+  tag_editor_positions = {
+    [player_index] = position
+  },
   players = {
     [player_index] = {
       toggle_fave_bar_buttons = boolean,
@@ -39,7 +42,6 @@ storage = {
           tag = LuaCustomChartTag,
           gps = string,
           faved_by_players = { [player_index] = true },
-          description = string,
           -- ...other tag fields
         },
       },

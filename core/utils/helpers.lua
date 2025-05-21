@@ -69,9 +69,7 @@ function Helpers.gps_to_map_position(gps)
   local x_num = tonumber(x_str)
   local y_num = tonumber(y_str)
   if not x_num or not y_num then return end
-  local x = Helpers.math_round(x_num)
-  local y = Helpers.math_round(y_num)
-  return { x = x, y = y }
+  return { x = Helpers.math_round(x_num), y = Helpers.math_round(y_num) }
 end
 
 --- Returns the "xxx.yyy" portion from a gps. No surface info
@@ -146,5 +144,22 @@ local function find_gui_element_by_name(player, parent_name, target_name)
 end
 
 Helpers.find_gui_element_by_name = find_gui_element_by_name
+
+-- Deep equality check for two Lua tables (objects)
+function Helpers.tables_equal(a, b)
+  if a == b then return true end
+  if type(a) ~= "table" or type(b) ~= "table" then return false end
+  for k, v in pairs(a) do
+    if type(v) == "table" and type(b[k]) == "table" then
+      if not Helpers.tables_equal(v, b[k]) then return false end
+    elseif v ~= b[k] then
+      return false
+    end
+  end
+  for k in pairs(b) do
+    if a[k] == nil then return false end
+  end
+  return true
+end
 
 return Helpers

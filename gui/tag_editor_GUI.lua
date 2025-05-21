@@ -18,7 +18,9 @@ TagEditorGUI.current_position = nil -- Stores the current MapPosition for the op
 
 function TagEditorGUI.open(player, position, context)
   Storage.set_tag_editor_position(player, position)
-  return TagEditorGUIBuilder.open(player, position, context)
+  local builder = TagEditorGUIBuilder.open(player, position, context)
+  TagEditorGUI.update_save_btn(player)
+  return builder
 end
 
 function TagEditorGUI.get_current_position(player)
@@ -33,27 +35,25 @@ end
 TagEditorGUI.add_row = TagEditorGUIBuilder.add_row
 TagEditorGUI.on_click = TagEditorGUIEvents.on_click
 
---- Extracts icon, text, description, and favorite state from the tag editor GUI
+--- Extracts icon, text, and favorite state from the tag editor GUI
 -- @param frame LuaGuiElement (ft_tag_editor_frame)
--- @return table {icon, text, description, is_favorite, favorite_btn, icon_picker, text_box, desc_box}
+-- @return table {icon, text, is_favorite, favorite_btn, icon_picker, text_box, error_label}
 function TagEditorGUI.get_gui_input(frame, player)
   local favorite_btn = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_favorite_btn")
   local icon_picker = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "tag-editor-icon")
   local text_box = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_textbox")
-  local desc_box = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_descbox")
+  local error_label = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_error_label")
   local icon = icon_picker and icon_picker.elem_value or nil
   local text = text_box and (text_box.text or ""):gsub("^%s*(.-)%s*$", "%1") or ""
-  local description = desc_box and (desc_box.text or ""):gsub("^%s*(.-)%s*$", "%1") or ""
   local is_favorite = (favorite_btn and favorite_btn.sprite and favorite_btn.sprite ~= "")
   return {
     icon = icon,
     text = text,
-    description = description,
     is_favorite = is_favorite,
     favorite_btn = favorite_btn,
     icon_picker = icon_picker,
     text_box = text_box,
-    desc_box = desc_box
+    error_label = error_label
   }
 end
 
@@ -93,7 +93,7 @@ function TagEditorGUI.handle_action(player, action)
     if map_tag and map_idx then
       table.remove(map_tags, map_idx)
     end
-    Storage.reset_chart_tags(player)
+    Storage.reset_cached_chart_tags(player.surface.index)
     if Storage.save_data then Storage.save_data(Storage.get()) end
     TagEditorGUI.close(player)
     return
@@ -185,7 +185,10 @@ function TagEditorGUI.on_click(event)
       end
     end
   end
-  -- ...existing code...
+  -- Delegate all other clicks to the events module
+  if TagEditorGUIEvents and TagEditorGUIEvents.on_click then
+    return TagEditorGUIEvents.on_click(event, TagEditorGUI, player)
+  end
 end
 
 function TagEditorGUI.on_open_tag_editor(event)
@@ -227,6 +230,18 @@ function TagEditorGUI.on_elem_changed(event)
   -- Only update if the changed element is the tag editor icon picker
   if event.element.name == "tag-editor-icon" then
     TagEditorGUI.update_save_btn(player)
+  end
+end
+
+-- Handles Factorio on_gui_closed event for the tag editor
+-- Called from core/control/events.lua
+function TagEditorGUI.on_gui_closed(event)
+  local player = _G.game.get_player(event.player_index)
+  if not player then return end
+  -- Only close if the tag editor is open
+  local frame = player.gui.screen["ft_tag_editor_outer_frame"]
+  if frame then
+    TagEditorGUI.close(player)
   end
 end
 

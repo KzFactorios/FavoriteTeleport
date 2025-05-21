@@ -51,8 +51,16 @@ function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
   end
   if not event or not event.element or not event.element.valid then return end
   local gui_player = player or (event.player_index and _G and _G.game and _G.game.get_player and _G.game.get_player(event.player_index))
-  -- NOTE: This check is valid. find_gui_element_by_name now returns the parent if parent_name == target_name.
-  local outer = gui_player and require('core.utils.helpers').find_gui_element_by_name(gui_player, "ft_tag_editor_outer_frame", "ft_tag_editor_outer_frame")
+  local outer = nil
+  if gui_player and gui_player.gui and gui_player.gui.screen then
+    -- Use direct access, not require, to avoid runtime error
+    for _, child in pairs(gui_player.gui.screen.children) do
+      if child.name == "ft_tag_editor_outer_frame" then
+        outer = child
+        break
+      end
+    end
+  end
   if outer then
     if not is_inside_tag_editor(event.element) and event.element.name ~= "ft_tag_editor_outer_frame" then
       -- Click was outside the tag editor, ignore

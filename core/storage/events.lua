@@ -5,8 +5,6 @@ local StorageEvents = {}
 local StorageInit = require("core.storage.init")
 local Helpers = require("core.utils.helpers")
 
-local storage = _G.storage.FavoriteTeleport
-
 --- Called when a player leaves the game; cleans up their tag ownership and favorites
 function StorageEvents.on_player_left_game(player_index, player_name)
   if not _G.game or not _G.game.surfaces then return end

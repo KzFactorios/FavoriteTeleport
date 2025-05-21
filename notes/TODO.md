@@ -11,3 +11,5 @@
 - [ ] Test for the display of unforeseen large strings - player names, 
 - [ ] Check limits on size for chart tag text
 - [ ] Check for map editor functionality
+- [ ] When a chart_tag is destroyed, it should destroy any linked map_tags
+- [ ] When a map_tag is destroyed, it should destroy any linked chart_tags

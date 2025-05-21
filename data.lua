@@ -126,5 +126,12 @@ data:extend {
     consuming = "game-only",
     order = "zz1"
   },
+  {
+    type = "custom-input",
+    name = "ft_tag_editor_confirm",
+    key_sequence = "E",
+    consuming = "game-only",
+    order = "zz2"
+  },
   
 }

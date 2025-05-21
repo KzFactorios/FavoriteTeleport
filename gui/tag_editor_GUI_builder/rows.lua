@@ -16,8 +16,12 @@ function Rows.add_row(parent, name, label_caption, label_style, element_def, opt
   local row = parent.add { type = "flow", direction = "horizontal", name = name }
   if opts.top_margin then row.style.top_margin = opts.top_margin end
   row.style.vertical_align = "center"
-  local label = row.add { type = "label", caption = label_caption, style = label_style }
-  if opts.label_margin then label.style.left_margin = opts.label_margin end
+  local label = nil
+  -- Only add a label if this is not the error row
+  if name ~= "ft_tag_editor_error_row" then
+    label = row.add { type = "label", caption = label_caption, style = label_style or "label" }
+    if label and label.style and opts.label_margin then label.style.left_margin = opts.label_margin end
+  end
   -- Add the main element (button, textfield, etc)
   local element = row.add(element_def)
   return row, label, element

@@ -5,20 +5,32 @@ local StorageInit = {}
 local Constants = require("constants")
 local PlayerFavorites = require("core.storage.player_favorites")
 local Helpers = require("core.utils.helpers")
-local ChartTags = require("core.storage.chart_tags")
+-- Removed: local ChartTags = require("core.storage.chart_tags")
+-- At the top of any file (e.g., core/storage/init.lua or control.lua)
+--[[
+  VERSION MANAGEMENT:
+  This mod's version is auto-injected from info.json at build time.
+  To update the version in runtime code, run:
+      python scripts/update_version.py
+  This will update core/version.lua with the current version from info.json.
+  Do NOT edit core/version.lua manually.
+]] --
+local mod_version = require("core.version")
 
 -- Ensure 'storage' is defined as a global table if not already present
 _G.storage = _G.storage or {}
 local storage = _G.storage
 
 function StorageInit.init()
-  if not storage.FavoriteTeleport then
-    storage.FavoriteTeleport = {
-      mod_version = nil,
-      players = {},
-      surfaces = {},
-    }
+  if not storage.FavoriteTeleport or type(storage.FavoriteTeleport) ~= "table" then
+    storage.FavoriteTeleport = {}
   end
+  local ft = storage.FavoriteTeleport
+  if not ft.mod_version or type(ft.mod_version) ~= "string" then ft.mod_version = mod_version end
+  if type(ft.tag_editor_positions) ~= "table" then ft.tag_editor_positions = {} end
+  if type(ft.players) ~= "table" then ft.players = {} end
+  if type(ft.surfaces) ~= "table" then ft.surfaces = {} end
+  StorageInit.inject_player_favorites_dependency()
 end
 
 function StorageInit.get()
@@ -26,14 +38,8 @@ function StorageInit.get()
   return storage.FavoriteTeleport
 end
 
-PlayerFavorites.get_player_data = StorageInit.get_player_data
-
 function StorageInit.get_player_favorites(player)
   return PlayerFavorites.get_player_favorites(player)
-end
-
-function StorageInit.ensure_favorite_slots_initialized(slots, surface_index)
-  return PlayerFavorites.ensure_favorite_slots_initialized(slots, surface_index)
 end
 
 --- Gets or initializes persistent data for a specific player
@@ -49,6 +55,21 @@ function StorageInit.get_player_data(player)
     global_data.players[player.index] = pdata
   end
   return pdata
+end
+
+function StorageInit.get_player_data_by_player_index(player_index)
+  local global_data = StorageInit.get()
+  global_data.players = global_data.players or {}
+  local pdata = global_data.players[player_index]
+  if type(pdata) ~= "table" then
+    pdata = {}
+    global_data.players[player_index] = pdata
+  end
+  return pdata
+end
+
+function StorageInit.inject_player_favorites_dependency()
+  PlayerFavorites.get_player_data = StorageInit.get_player_data
 end
 
 --- Gets or initializes the surface data table for a player's current surface
@@ -72,8 +93,25 @@ function StorageInit.get_surface_data(player)
   return surface_data
 end
 
+--- Adds or updates a map_tag in the given surface's map_tags (by gps)
+function StorageInit.add_or_update_map_tag(player, map_tag)
+  local map_tags = StorageInit.get_map_tags(player)
+  for i, mt in ipairs(map_tags) do
+    if mt.gps == map_tag.gps then
+      map_tags[i] = map_tag
+      return
+    end
+  end
+
+  --if not found then--
+  -- Remove any runtime object references before storing
+  if map_tag.tag then map_tag.tag = nil end
+
+  table.insert(map_tags, map_tag)
+end
+
 function StorageInit.get_map_tags(player)
-  if not player or not player.surface or not player.surface.index then return {} end
+  if not player then return {} end
   return StorageInit.get_surface_data(player).map_tags or {}
 end
 
@@ -83,9 +121,10 @@ end
 -- @return LuaCustomChartTag|nil
 function StorageInit.find_chart_tag_by_gps(player, gps)
   if not player or not gps then return nil end
-  local chart_tags = ChartTags.get_chart_tags(player)
-  for _, tag in pairs(chart_tags) do
-    if tag and tag.position then
+  local surface_data = StorageInit.get_surface_data(player)
+  if not surface_data or not surface_data.chart_tags then return nil end
+  for _, tag in pairs(surface_data.chart_tags) do
+    if tag.position then
       local tag_gps = Helpers.format_gps(tag.position.x, tag.position.y, player.surface.index)
       if tag_gps == gps then
         return tag
@@ -98,10 +137,8 @@ end
 function StorageInit.find_map_tag_by_gps(player, gps)
   if not player or not gps then return nil end
   for _, tag in pairs(StorageInit.get_map_tags(player)) do
-    if tag and tag.gps then
-      if tag.gps == gps then
-        return tag
-      end
+    if tag.gps == gps then
+      return tag
     end
   end
   return nil
@@ -126,7 +163,7 @@ end
 function StorageInit.reset_cached_chart_tags(surface_index)
   local storage = StorageInit.get()
   if storage.surfaces and storage.surfaces[surface_index] then
-    storage.surfaces[surface_index].chart_tags = nil
+    storage.surfaces[surface_index].chart_tags = {}
   end
 end
 
@@ -172,41 +209,41 @@ function StorageInit.rehome_chart_tag(player, chart_tag, gps)
   local new_chart_tag = player.force.add_chart_tag(surface, tag_spec)
 
   if new_chart_tag then
-    local update_gps = 
-    Helpers.format_gps(new_chart_tag.position.x, new_chart_tag.position.y, player.surface.index)
+    local update_gps =
+        Helpers.format_gps(new_chart_tag.position.x, new_chart_tag.position.y, player.surface.index)
     for _, favorite in pairs(matching_favorites) do
       favorite.gps = update_gps
     end
 
     if found_map_tag then
       found_map_tag.gps = update_gps
-      found_map_tag.chart_tag = new_chart_tag
     end
     -- Destroy the old chart tag
     pcall(function() chart_tag.destroy() end)
   end
 
   return new_chart_tag or chart_tag
-
 end
-
 
 -- In core/storage.lua, add per-player tag editor position storage
-local tag_editor_positions = {}
-
-function StorageInit.set_tag_editor_position(player, pos)
-  if not player or type(player) ~= "table" or not player.index then return end
-  tag_editor_positions[player.index] = pos
+function StorageInit.get_tag_editor_position(player)
+  if not player or type(player) ~= "userdata" or not player.index then return nil end
+  local global_data = StorageInit.get()
+  return global_data.tag_editor_positions[player.index] or nil
 end
 
-function StorageInit.get_tag_editor_position(player)
-  if not player or type(player) ~= "table" or not player.index then return nil end
-  return tag_editor_positions[player.index]
+function StorageInit.set_tag_editor_position(player, pos)
+  if not player or type(player) ~= "userdata" or not player.index then return end
+  local global_data = StorageInit.get()
+  global_data.tag_editor_positions = global_data.tag_editor_positions or {}
+  global_data.tag_editor_positions[player.index] = pos
 end
 
 function StorageInit.clear_tag_editor_position(player)
-  if not player or type(player) ~= "table" or not player.index then return end
-  tag_editor_positions[player.index] = nil
+  if not player or type(player) ~= "userdata" or not player.index then return end
+  local global_data = StorageInit.get()
+  global_data.tag_editor_positions = global_data.tag_editor_positions or {}
+  global_data.tag_editor_positions[player.index] = nil
 end
 
 return StorageInit

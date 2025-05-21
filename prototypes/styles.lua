@@ -155,3 +155,19 @@ gui_style.ft_tag_editor_top_row_frame = {
 gui_style.ft_tag_editor_top_row = {
   type = "horizontal_flow_style",
 }
+
+gui_style.te_tr_error_label = {
+  type = "label_style",
+  parent = "label",
+  font = "default-bold",
+  font_color = { r = 1, g = 0.2, b = 0.2 }, -- red
+  single_line = false,
+  horizontally_stretchable = "on",
+  vertically_stretchable = "off",
+  maximal_width = 400,
+  minimal_width = 120,
+  top_padding = 2,
+  bottom_padding = 2,
+  left_padding = 4,
+  right_padding = 4,
+}
