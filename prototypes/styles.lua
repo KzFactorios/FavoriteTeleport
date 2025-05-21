@@ -132,7 +132,7 @@ gui_style.te_tr_top_row_frame = {
   graphical_set = {
     base = {
       position = {0, 0},
-      corner_size = 8, -- FIX: use corner_size, not corner
+      corner_size = 2, -- helps fill space without touching the padding of the parent
       draw_type = "outer",
       tint = { r = 0.25, g = 0.25, b = .25, a = 1 }
     }
@@ -147,52 +147,70 @@ gui_style.te_tr_last_user_label_container = {
 gui_style.te_tr_last_user_action_container = {
   type = "frame_style",
   parent = "invisible_frame",
-}
-
-gui_style.te_tr_move_button_container = {
-  type = "frame_style",
-  parent = "invisible_frame",
-}
-
-gui_style.te_tr_delete_button_container = {
-  type = "frame_style",
-  parent = "invisible_frame",
+  top_padding = 4
 }
 
 gui_style.te_tr_move_button = {
   type = "button_style",
-  parent = "slot_button"
-}
-
-
-gui_style.te_tr_delete_button = {
-  type = "button_style",
   parent = "slot_button",
   default_graphical_set = {
     base = {
-      position = { 136, 0 }, -- red slot background from vanilla sprite sheet
-      corner_size = 8,
+      position = { 136, 0 }, 
+      corner_size = 6,
       draw_type = "outer"
     }
   },
   hovered_graphical_set = {
     base = {
       position = { 170, 0 }, -- red slot hover background
-      corner_size = 8,
+      corner_size = 6,
       draw_type = "outer"
     }
   },
   clicked_graphical_set = {
     base = {
       position = { 204, 0 }, -- red slot pressed background
-      corner_size = 8,
+      corner_size = 6,
       draw_type = "outer"
     }
   },
   disabled_graphical_set = {
     base = {
       position = { 238, 0 }, -- red slot disabled background
-      corner_size = 8,
+      corner_size = 6,
+      draw_type = "outer"
+    }
+  }
+}
+
+gui_style.te_tr_delete_button = {
+  type = "button_style",
+  parent = "slot_button",
+  default_graphical_set = {
+    base = {
+      position = { 136, 0 }, 
+      corner_size = 6,
+      draw_type = "outer"
+    }
+  },
+  hovered_graphical_set = {
+    base = {
+      position = { 170, 0 }, -- red slot hover background
+      corner_size = 6,
+      draw_type = "outer"
+    }
+  },
+  clicked_graphical_set = {
+    base = {
+      position = { 204, 0 }, -- red slot pressed background
+      corner_size = 6,
+      draw_type = "outer"
+    }
+  },
+  disabled_graphical_set = {
+    base = {
+      position = { 238, 0 }, -- red slot disabled background
+      corner_size = 6,
       draw_type = "outer"
     }
   }
