@@ -11,7 +11,7 @@
 
 ## Favorite Bar UI Structure
 - Outer frame contains two horizontal frames:
-  1. `toggle_favorite_buttons` (shows/hides the bar, syncs with storage).
+  1. `toggle_favorite_buttons` (shows/hides the bar, syncs with cache).
   2. Up to `MAX_FAVORITE_SLOTS` buttons for player favorites, in order.
 - If fewer favorites than slots, fill with `{ gps = "", slot_locked = false }`.
 - If more than `MAX_FAVORITE_SLOTS`, throw an error.

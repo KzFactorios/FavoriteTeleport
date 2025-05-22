@@ -13,7 +13,7 @@ local TagEditorGUI = require("gui.tag_editor_GUI")
 local MoveMarker = require('core.control.move_marker')
 local Helpers = require("core.utils.helpers")
 local TagSync = require("core.tag_sync.tag_sync_suite")
-local Storage = require("core.storage.init")
+local Cache = require("core.cache.init")
 
 local Control = {}
 
@@ -130,7 +130,7 @@ end
 script.on_event(defines.events.on_tick, function(event)
   -- Move marker rendering for tag move mode
   for _, player in pairs(game.connected_players) do
-    local ft = _G.storage and _G.storage.FavoriteTeleport
+    local ft = global.FavoriteTeleport
     if ft and ft.ft_tag_editor_move_mode and ft.ft_tag_editor_move_mode[player.index] then
       local move_mode = ft.ft_tag_editor_move_mode[player.index]
       if move_mode.active and move_mode.gps then
@@ -148,8 +148,8 @@ end)
 script.on_event(defines.events.on_player_selected_area, function(event)
   local player = game.get_player(event.player_index)
   if not player then return end
-  local storage = Storage.get()
-  local move_mode = storage.ft_tag_editor_move_mode and storage.ft_tag_editor_move_mode[player.index]
+  local cache = Cache.get_data()
+  local move_mode = cache.ft_tag_editor_move_mode and cache.ft_tag_editor_move_mode[player.index]
   if not (move_mode and move_mode.active) then return end
 
   -- Only allow move on the correct surface
@@ -163,14 +163,15 @@ script.on_event(defines.events.on_player_selected_area, function(event)
     x = (event.area.left_top.x + event.area.right_bottom.x) / 2,
     y = (event.area.left_top.y + event.area.right_bottom.y) / 2
   }
-  local new_gps = Helpers.format_gps(new_pos.x, new_pos.y, event.surface_index)
+  -- Patch: TagSync.move_tag expects new_position as MapPosition, not GPS string
+  -- local new_gps = Helpers.format_gps(new_pos.x, new_pos.y, event.surface_index)
 
   -- Move the tag and sync all data
-  TagSync.move_tag(player, move_mode.gps, new_gps)
+  TagSync.move_tag(player, move_mode.gps, new_pos)
 
   -- Clear move mode and remove marker
-  storage.ft_tag_editor_move_mode[player.index] = nil
-  if Storage.save_data then Storage.save_data(storage) end
+  cache.ft_tag_editor_move_mode[player.index] = nil
+  -- No need to call save_data; global.FavoriteTeleport is always persistent
 
   -- Reopen the tag editor at the new location
   TagEditorGUI.open(player, new_pos)
@@ -180,12 +181,10 @@ end)
 script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
   local player = game.get_player(event.player_index)
   if not player then return end
-  local storage = Storage.get()
-  -- Use StorageInit.get() to ensure ft_tag_editor_move_mode is always initialized
-  local move_mode_tbl = Storage.get().ft_tag_editor_move_mode
-  if move_mode_tbl and move_mode_tbl[player.index] then
+  local cache = Cache.get_data()
+  local move_mode_tbl = cache.ft_tag_editor_move_mode or {}
+  if move_mode_tbl[player.index] then
     move_mode_tbl[player.index] = nil
-    if Storage.save_data then Storage.save_data(Storage.get()) end
     player.create_local_flying_text{text = {"ft_tag_editor_move_cancelled"}, position = player.position, color = {r=1,g=0.5,b=0.5}}
   end
 end)

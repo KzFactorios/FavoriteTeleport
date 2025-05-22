@@ -1,12 +1,16 @@
 -- Rendering marker for tag move mode
 -- This file is required by control.lua to handle rendering of the move marker
-local rendering = require('rendering')
+-- Use the global 'rendering' API provided by Factorio, do NOT require it
 local Helpers = require('core.utils.helpers')
 
 local MoveMarker = {}
 
 -- Store marker ids per player
 local marker_ids = {}
+
+-- Forward declare rendering as global for linter/IDE, but do not assign
+---@diagnostic disable-next-line: undefined-global
+local rendering = rendering
 
 function MoveMarker.show_marker(player, gps)
   if not (player and player.valid and gps) then return end

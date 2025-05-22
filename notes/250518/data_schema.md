@@ -8,7 +8,7 @@ Defines the persistent data structures for the mod, including player favorites, 
 ## Top-Level Schema
 
 ```lua
-storage = {
+cache = {
   mod_version = "0.0.01",
   tag_editor_positions = {
     [player_index] = position
@@ -38,9 +38,9 @@ storage = {
   surfaces = {
     [surface_index] = {
       maptags = {
-        [tag_id] = {
-          tag = LuaCustomChartTag,
+        [gps] = {
           gps = string,
+          tag = LuaCustomChartTag,
           faved_by_players = { [player_index] = true },
           -- ...other tag fields
         },

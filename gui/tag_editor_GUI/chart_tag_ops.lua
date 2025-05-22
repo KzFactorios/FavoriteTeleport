@@ -2,7 +2,7 @@
 -- Chart tag and map tag creation/update logic for TagEditorGUI
 
 local ChartTagOps = {}
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local Helpers = require("core.utils.helpers")
 local MapTag = require("core.map_tag")
 local Constants = require("constants")
@@ -10,7 +10,8 @@ local FavoriteSlots = require("core.utils.favorite_slots")
 local TagSync = require("core.tag_sync.tag_sync_suite")
 
 ChartTagOps.find_create_chart_tag_on_confirm = function(player, gps, input)
-  return TagSync.create_tag(player, Helpers.gps_to_map_position(gps), input)
+  -- Patch: TagSync.create_tag expects gps as string, not MapPosition
+  return TagSync.create_tag(player, gps, input)
 end
 
 ChartTagOps.find_create_map_tag_on_confirm = function(player, gps, chart_tag, input, current_position)

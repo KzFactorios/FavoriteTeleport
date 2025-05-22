@@ -14,3 +14,4 @@
 - [ ] When a chart_tag is destroyed, it should destroy any linked map_tags
 - [ ] When a map_tag is destroyed, it should destroy any linked chart_tags
 - [ ] Multiplayer: play around with ownership of tags
+- [ ] Match vanilaa styling for delete and move button in the TE

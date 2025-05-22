@@ -4,7 +4,7 @@
 --- @field slot_locked boolean
 local Favorite = {}
 
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local Helpers = require("core.utils.helpers")
 
 --- Creates a new Favorite instance for a given surface
@@ -19,16 +19,16 @@ function Favorite.new(gps, slot_locked)
   return self
 end
 
---- Returns the map_tag for this favorite (from storage for this surface)
+--- Returns the map_tag for this favorite (from cache for this surface)
 function Favorite:get_map_tag(player)
   -- player is optional, but can be used for surface context if needed
-  return Storage.find_map_tag_by_gps(player or nil, self.gps)
+  return Cache.find_map_tag_by_gps(player or nil, self.gps)
 end
 
---- Returns the chart_tag for this favorite (from storage for this surface)
+--- Returns the chart_tag for this favorite (from cache for this surface)
 function Favorite:get_chart_tag(player)
   -- player is optional, but can be used for surface context if needed
-  return Storage.find_chart_tag_by_gps(player or nil, self.gps)
+  return Cache.find_chart_tag_by_gps(player or nil, self.gps)
 end
 
 return Favorite

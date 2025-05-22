@@ -27,7 +27,7 @@ MapTag.remove_player_index_from_faved_by_players = nil
 MapTag.add_player_to_faved_by_players = nil
 
 local Helpers = require("core.utils.helpers")
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local MapTagDummy = require("core.map_tag_dummy")
 local Position = require("core.utils.position")
 local Settings = require("settings")
@@ -64,7 +64,7 @@ function MapTag.new(player, position, chart_tag, is_favorite)
 end
 
 function MapTag.add_player_to_faved_by_players(self, player)
-  if self.faved_by_players and type(self.faved_by_players) == "table" and Storage.get_available_favorite_slots_count(player) > 0 then
+  if self.faved_by_players and type(self.faved_by_players) == "table" and Cache.get_available_favorite_slots_count(player) > 0 then
     local faved_bys = self.faved_by_players or {}
     local result, idx = Helpers.index_is_in_table(self.faved_by_players, player.index)
     if not (result and result == true) then
@@ -91,7 +91,7 @@ end
 
 --- @returns LuaCustomChartTag|nil
 function MapTag.get_chart_tag(self)
-  local found = Storage.find_chart_tag_by_gps(self.gps)
+  local found = Cache.find_chart_tag_by_gps(self.gps)
   if found and type(found) == "table" then
     return found
   end
@@ -125,7 +125,7 @@ function MapTag.create_chart_tag_from_map_tag(player, map_tag)
   }
 
   local chart_tag = player.force.add_chart_tag(player.surface, chart_tag_spec)
-  Storage.reset_cached_chart_tags(player.surface.index)
+  Cache.reset_cached_chart_tags(player.surface.index)
   if not chart_tag then
     -- Only return a dummy table in test environments
     if _G and _G._TEST then

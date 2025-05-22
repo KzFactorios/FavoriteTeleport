@@ -41,7 +41,16 @@ Helpers.format_favorite_tooltip = FavoriteSlots.format_favorite_tooltip
 Helpers.is_valid_map_position = Validation.is_valid_map_position
 
 function Helpers.format_gps(x, y, surface_index)
+  if surface_index == nil or tonumber(surface_index) == nil then
+    -- Defensive: print to console and always error
+    print("[FavoriteTeleport] ERROR: format_gps called with nil or invalid surface_index! x="..tostring(x)..", y="..tostring(y)..", surface_index="..tostring(surface_index))
+    error("[FavoriteTeleport] ERROR: format_gps called with nil or invalid surface_index! x="..tostring(x)..", y="..tostring(y)..", surface_index="..tostring(surface_index))
+  end
   local function format_coord(n)
+    if n == nil then
+      print("[FavoriteTeleport] ERROR: format_gps called with nil coordinate! x="..tostring(x)..", y="..tostring(y)..", surface_index="..tostring(surface_index))
+      error("[FavoriteTeleport] ERROR: format_gps called with nil coordinate! x="..tostring(x)..", y="..tostring(y)..", surface_index="..tostring(surface_index))
+    end
     local _n = math.abs(Helpers.math_round(n))
     local sign = n < 0 and "-" or ""
     return string.format("%s%03d", sign, _n)

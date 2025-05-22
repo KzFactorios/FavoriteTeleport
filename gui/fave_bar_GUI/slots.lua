@@ -4,7 +4,7 @@
 local Slots = {}
 
 local Constants = require("constants")
-local Storage = require("core.storage.init")
+local Cache = require("core.cache.init")
 local Helpers = require("core.utils.helpers")
 local GuiBase = require("gui.gui_base")
 local Style = require("gui.fave_bar_GUI.style")
@@ -12,7 +12,7 @@ local Style = require("gui.fave_bar_GUI.style")
 --- Updates the favorites bar slots for the current surface
 -- @param player LuaPlayer
 function Slots.update_slots(player)
-  local favorites = Storage.get_player_favorites(player)
+  local favorites = Cache.get_player_favorites(player)
   Helpers.init_favorite_slots(favorites, Constants.MAX_FAVORITE_SLOTS)
   local gui = player.gui.top
   local bar = gui.ft_fave_bar

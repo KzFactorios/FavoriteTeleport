@@ -101,7 +101,7 @@ data:extend {
     order = "cj"
   },
   {
-    name = Constants.events.STORAGE_DUMP,
+    name = Constants.events.CACHE_DUMP,
     type = "custom-input",
     key_sequence = "CONTROL + F12",
     order = "zz"

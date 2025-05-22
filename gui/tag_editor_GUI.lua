@@ -3,7 +3,7 @@
 
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local TagEditorGUIBuilder = require("gui.tag_editor_GUI_builder")
 local TagEditorGUIValidation = require("gui.tag_editor_GUI.validation")
 local TagEditorGUIEvents = require("gui.tag_editor_GUI.events")
@@ -16,18 +16,18 @@ local TagEditorGUI = {}
 TagEditorGUI.current_position = nil -- Stores the current MapPosition for the open tag editor
 
 function TagEditorGUI.open(player, position, context)
-  Storage.set_tag_editor_position(player, position)
+  Cache.set_tag_editor_position(player, position)
   local builder = TagEditorGUIBuilder.open(player, position, context)
   TagEditorGUI.update_save_btn(player)
   return builder
 end
 
 function TagEditorGUI.get_current_position(player)
-  return Storage.get_tag_editor_position(player)
+  return Cache.get_tag_editor_position(player)
 end
 
 function TagEditorGUI.close(player)
-  Storage.clear_tag_editor_position(player)
+  Cache.clear_tag_editor_position(player)
   return TagEditorGUIBuilder.close(player)
 end
 
@@ -56,8 +56,12 @@ function TagEditorGUI.get_gui_input(frame, player)
   }
 end
 
-TagEditorGUI.find_create_chart_tag_on_confirm = TagSync.create_tag
+TagEditorGUI.find_create_chart_tag_on_confirm = function(player, gps, input)
+  -- Patch: TagSync.create_tag expects gps as string, not MapPosition
+  return TagSync.create_tag(player, gps, input)
+end
 TagEditorGUI.find_create_map_tag_on_confirm = function(player, gps, chart_tag, input)
+  -- Patch: TagSync.update_tag expects gps as string
   return TagSync.update_tag(player, gps, input)
 end
 TagEditorGUI.handle_confirm = function(player)
@@ -86,27 +90,27 @@ function TagEditorGUI.handle_action(player, action)
   elseif action == "delete" then
     if player and player.print then player.print("[FavoriteTeleport] Delete call") end
     local gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
-    -- Use the new storage method to destroy the chart tag and remove from storage
-    local destroyed = Storage.destroy_chart_tag(player, gps)
+    -- Use the new cache method to destroy the chart tag and remove from cache
+    local destroyed = Cache.destroy_chart_tag(player, gps)
     -- Remove map tag if present
-    local map_tags = Storage.get_map_tags(player)
-    local map_tag, map_idx = Storage.find_map_tag_by_gps(player, gps)
+    local map_tags = Cache.get_map_tags(player)
+    local map_tag, map_idx = Cache.find_map_tag_by_gps(player, gps)
     if map_tag and map_idx then
       table.remove(map_tags, map_idx)
     end
-    Storage.reset_cached_chart_tags(player.surface.index)
-    if Storage.save_data then Storage.save_data(Storage.get()) end
+    Cache.reset_cached_chart_tags(player.surface.index)
+    if Cache.save_data then Cache.save_data(Cache.get()) end
     TagEditorGUI.close(player)
     return
   elseif action == "move" then
-    local storage = Storage.get()
-    storage.ft_tag_editor_move_mode = storage.ft_tag_editor_move_mode or {}
-    storage.ft_tag_editor_move_mode[player.index] = {
+    local cache = Cache.get()
+    cache.ft_tag_editor_move_mode = cache.ft_tag_editor_move_mode or {}
+    cache.ft_tag_editor_move_mode[player.index] = {
       active = true,
       surface_index = player.surface.index,
       gps = frame.ft_tag_editor_teleport_row.ft_tag_editor_pos_btn.caption
     }
-    if Storage.save_data then Storage.save_data(storage) end
+    if Cache.save_data then Cache.save_data(cache) end
 
     TagEditorGUI.close(player)
     return

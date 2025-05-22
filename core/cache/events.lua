@@ -1,12 +1,12 @@
--- core/storage/events.lua
--- Storage-related event handlers and multiplayer cleanup for FavoriteTeleport
+-- core/cache/events.lua
+-- Cache-related event handlers and multiplayer cleanup for FavoriteTeleport
 
-local StorageEvents = {}
-local StorageInit = require("core.storage.init")
+local CacheEvents = {}
+local Cache = require("core.cache.init")
 local Helpers = require("core.utils.helpers")
 
 --- Called when a player leaves the game; cleans up their tag ownership and favorites
-function StorageEvents.on_player_left_game(player_index, player_name)
+function CacheEvents.on_player_left_game(player_index, player_name)
   if not _G.game or not _G.game.surfaces then return end
   local player = _G.game.players[player_index]
   if not player then return end
@@ -17,8 +17,8 @@ function StorageEvents.on_player_left_game(player_index, player_name)
 
   for _, surface in pairs(_G.game.surfaces) do
     if surface and surface.valid and type(surface) == "table" or type(surface) == "LuaSurface" then
-      local favorites = StorageInit.get_player_favorites(player)
-      local map_tags = StorageInit.get_map_tags(player)
+      local favorites = Cache.get_player_favorites(player)
+      local map_tags = Cache.get_map_tags(player)
       local chart_tags = _G.game.forces["player"].find_chart_tags(surface) or {}
 
       for _, o in pairs(favorites) do
@@ -109,4 +109,4 @@ function StorageEvents.on_player_left_game(player_index, player_name)
   
 end
 
-return StorageEvents
+return CacheEvents

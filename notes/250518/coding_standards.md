@@ -67,4 +67,4 @@ See also: `architecture.md`, `data_schema.md`, `error_handling.md`.
 This ensures correct variable substitution in all user-facing strings.
 
 Only require modules once at the top of the file.
-Use the already-imported variables (e.g., Helpers, Storage) inside your functions.
+Use the already-imported variables (e.g., Helpers) inside your functions.

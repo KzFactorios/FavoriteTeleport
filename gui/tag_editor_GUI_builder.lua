@@ -1,7 +1,7 @@
 local Constants = require("constants")
 local Helpers = require("core.utils.helpers")
 local Position = require("core.utils.position")
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local TopRow = require("gui.tag_editor_GUI_builder.top_row")
 local ActionRow = require("gui.tag_editor_GUI_builder.action_row")
 local ContentFrame = require("gui.tag_editor_GUI_builder.content_frame")
@@ -20,62 +20,65 @@ TagEditorGUIBuilderClass.__index = TagEditorGUIBuilderClass
 
 function TagEditorGUIBuilderClass:new(player, position, context)
   if not player or not position then return end
-  if not player.render_mode == _G.defines.render_mode.chart then return end
+  -- Fix: Correct render_mode check
+  if player.render_mode ~= _G.defines.render_mode.chart then return end
 
   if Position.is_on_space_platform and Position.is_on_space_platform(player) or player.character == nil then return end
 
+  -- Snap to canonical position for tag creation
   position = Helpers.snap_position(position, Constants.settings.SNAP_SCALE_FOR_CLICKED_TAG)
   local position_can_be_tagged = Position.position_can_be_tagged(player, position)
   if not position_can_be_tagged then
-    --TODO let the player know that they are not able to create a tag from the position
+    -- Show feedback if the position cannot be tagged
+    player.create_local_flying_text{
+      text = {'ft_tag_editor_cannot_tag_here'},
+      position = position,
+      color = {r=1, g=0.2, b=0.2}
+    }
     return nil
   end
 
-
   --- @type LuaCustomChartTag|nil
   local chart_tag = nil
-  local gps = Helpers.map_position_to_gps(position, player.surface.index)
+  -- Always use canonical GPS string for this surface/position
+  local gps = Helpers.format_gps(position.x, position.y, player.surface.index)
 
-  -- TODO: Improve snap_scale logic.
-  -- Current approach snaps to the outside of the indicator for better UX: if the chart_tag indicator is highlighted ([]),
-  -- the user expects to select that location. However, the indicator is square and the selector is round, which can cause
-  -- slight mismatches. Consider snapping to the center of the indicator, matching selector/indicator shapes, or adding a
-  -- buffer zone for more intuitive selection. Also, explore dynamic snap_scale based on zoom or user preference.
+  -- Check for colliding tag (edit mode)
   local position_has_colliding_tag =
       Position.position_has_colliding_tag(player, position, Constants.settings.BOUNDING_BOX_TOLERANCE)
   if position_has_colliding_tag ~= nil then
-    -- we are editing, get the matching chart_tag
-    -- update the chart_tag position if necessary. Sometimes a chart_tag may have been created
-    -- by methods outside of this mod. This will normalize the position xxx.yyy
-    local collide_gps = Helpers.format_gps(position_has_colliding_tag.x, position_has_colliding_tag.y,
-      player.surface.index)
-    local found_tag = Storage.find_chart_tag_by_gps(player, collide_gps)
-
-    -- update to snapped pos
-    chart_tag = Storage.rehome_chart_tag(player, found_tag, collide_gps)
+    -- Normalize to the colliding tag's canonical GPS
+    local collide_gps = Helpers.format_gps(position_has_colliding_tag.x, position_has_colliding_tag.y, player.surface.index)
+    local found_tag = Cache.find_chart_tag_by_gps(player, collide_gps)
+    -- Update chart_tag to snapped/collided pos
+    chart_tag = Cache.rehome_chart_tag(player, found_tag, collide_gps)
     gps = collide_gps
   end
 
-  -- Do NOT create a chart tag here! Only look up existing.
-  chart_tag = Storage.find_chart_tag_by_gps(player, gps) or nil
-  local map_tag = Storage.find_map_tag_by_gps(player, gps)
+  -- Always look up chart_tag and map_tag by canonical GPS
+  chart_tag = Cache.find_chart_tag_by_gps(player, gps) or nil
+  local map_tag = Cache.find_map_tag_by_gps(player, gps)
 
-  local favorite_calc = map_tag and
-      map_tag:is_player_favorite(player) or false
+  local favorite_calc = map_tag and map_tag:is_player_favorite(player) or false
 
+  -- Use the chart tag's position if available, else snapped position
   local effective_position = chart_tag and chart_tag.position or position
 
-  Storage.set_tag_editor_position(player, effective_position)
+  -- Always set the tag editor position to the effective position
+  Cache.set_tag_editor_position(player, effective_position)
+
+  -- Always use canonical GPS for the builder object
+  local canonical_gps = Helpers.format_gps(effective_position.x, effective_position.y, player.surface.index)
 
   local o = {
     player = player,
-    position = effective_position, -- use the chart tag's pos
+    position = effective_position, -- use the chart tag's pos if present
     is_favorite = favorite_calc,
     context = context,
     gui = player.gui.screen,
     outer_frame = nil,
     content_frame = nil,
-    gps = Helpers.format_gps(effective_position.x, effective_position.y, player.surface.index) or gps,
+    gps = canonical_gps,
     chart_tag = chart_tag,
     map_tag = map_tag
   }

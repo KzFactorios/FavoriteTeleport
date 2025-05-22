@@ -1,6 +1,6 @@
 -- Tag editor GUI event handlers
 local TagEditorGUIEvents = {}
-local Storage = require('core.storage')
+local Cache = require("core.cache.init")
 local Helpers = require('core.utils.helpers')
 local TagSync = require('core.tag_sync.tag_sync_suite')
 
@@ -12,7 +12,7 @@ local GUICommands = {
     return "icon_picker"
   end,
   toggled_favorite_in_place = function(event, TagEditorGUI, player)
-    -- Only toggle the icon, do not update storage
+    -- Only toggle the icon, do not update cache
     if TagEditorGUI and TagEditorGUI.toggle_favorite_icon then
       TagEditorGUI.toggle_favorite_icon(player)
     end
@@ -78,7 +78,7 @@ function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
     return GUICommands.toggled_favorite_in_place(event, TagEditorGUI_local, player)
   elseif name == "ft_tag_editor_delete_btn" then
     -- Remove chart_tag, map_tag, and manage favorites for the current tag editor position
-    local tag_editor_positions = Storage.get().tag_editor_positions or {}
+    local tag_editor_positions = Cache.get().tag_editor_positions or {}
     local pos = tag_editor_positions[player.index]
     if pos then
       local gps = Helpers.format_gps(pos.x, pos.y, player.surface.index)
@@ -88,18 +88,18 @@ function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
     return GUICommands.delete(event, TagEditorGUI_local, player)
   elseif name == "ft_tag_editor_move_btn" then
     -- Activate move mode: next valid left-click on map will trigger the move
-    local tag_editor_positions = Storage.get().tag_editor_positions or {}
+    local tag_editor_positions = Cache.get().tag_editor_positions or {}
     local pos = tag_editor_positions[player.index]
     if pos then
-      -- Set a flag in storage to indicate move mode for this player
-      local storage = Storage.get()
-      storage.ft_tag_editor_move_mode = storage.ft_tag_editor_move_mode or {}
-      storage.ft_tag_editor_move_mode[player.index] = {
+      -- Set a flag in cache to indicate move mode for this player
+      local cache = Cache.get()
+      cache.ft_tag_editor_move_mode = cache.ft_tag_editor_move_mode or {}
+      cache.ft_tag_editor_move_mode[player.index] = {
         active = true,
         surface_index = player.surface.index,
         gps = Helpers.format_gps(pos.x, pos.y, player.surface.index)
       }
-      if Storage.save_data then Storage.save_data(storage) end
+      if Cache.save_data then Cache.save_data(cache) end
       -- The actual rendering of the move marker must be handled in control.lua on the next tick
       -- (see coding_standards.md for why rendering API is not available here)
       -- Optionally, show a flying text to indicate move mode
@@ -107,6 +107,8 @@ function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
     end
     TagEditorGUI_local.close(player)
     return GUICommands.move(event, TagEditorGUI_local, player)
+  elseif name == "ft_tag_editor_save_btn" then
+    return GUICommands.confirm(event, TagEditorGUI_local, player)
   end
 end
 

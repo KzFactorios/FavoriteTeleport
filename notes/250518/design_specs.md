@@ -17,8 +17,8 @@ FavoriteTeleport is a Factorio mod that provides a robust, modular, and user-fri
   - Cancel/Confirm buttons; confirm validates and saves.
   - Only one maptag per position.
   - If editing another player's tag, only allow favoriting, not editing.
-- **Storage & Data Layer:**
-  - Modularized storage for player favorites, chart tags, and events.
+- **Cache & Data Layer:**
+  - Modularized cache for player favorites, chart tags, and events.
   - Robust migration and schema management.
   - Per-player and per-surface data isolation.
 - **Hotkeys & Events:**
@@ -26,13 +26,13 @@ FavoriteTeleport is a Factorio mod that provides a robust, modular, and user-fri
   - Central handler for teleport and tag editor events.
 - **Testing & Maintainability:**
   - Modular code structure for all major features.
-  - Comprehensive test suite for storage, GUI, and helpers.
-  - Clear separation of GUI, storage, and logic layers.
+  - Comprehensive test suite for cache, GUI, and helpers.
+  - Clear separation of GUI, cache, and logic layers.
 
 ## Architecture
 - **control.lua:** Main entry point, event registration, and lifecycle management.
-- **core/context.lua:** Persistent data storage and schema management.
-- **core/storage/**: Modular storage helpers and migration utilities.
+- **core/context.lua:** Persistent data cache and schema management.
+- **core/cache/**: Modular cache helpers and migration utilities.
 - **core/utils/helpers/**: Utility functions, type checks, and formatting.
 - **gui/fave_bar_GUI.lua:** Favorites bar GUI logic and slot interaction.
 - **gui/tag_editor_GUI.lua:** Tag editor GUI and submodules for actions, favorite ops, and chart tag ops.

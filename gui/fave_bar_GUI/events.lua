@@ -4,7 +4,7 @@
 local Events = {}
 
 local map_tag = require("core.map_tag")
-local Storage = require("core.storage.init")
+local Cache = require("core.cache.init")
 local DragAndDrop = require("gui.drag_and_drop")
 local Slots = require("gui.fave_bar_GUI.slots")
 local Helpers = require("core.utils.helpers")
@@ -23,7 +23,7 @@ function Events.on_click(event)
     local slot = name:match("^ft_fave_slot_(%d+)$")
     if slot then
         slot = tonumber(slot)
-        local favorites = Storage.get_player_favorites(player)
+        local favorites = Cache.get_player_favorites(player)
         local fav = favorites[slot]
         if event.button == _G.defines.mouse_button_type.left then
             if not fav.gps or fav.gps == "" then
@@ -56,7 +56,7 @@ function Events.on_click(event)
                 return
             end
             -- Only open tag editor if in chart view
-            local pdata = Storage.get_player_data and Storage.get_player_data(player) or {}
+            local pdata = Cache.get_player_data and Cache.get_player_data(player) or {}
             local render_mode = pdata.render_mode or player.render_mode
             if render_mode == _G.defines.render_mode.chart or render_mode == _G.defines.render_mode.chart_zoomed_in then
                 TagEditorGUI.open(player, Helpers.gps_to_map_position(fav.gps), { opened_via_fave_bar = true, slot_index = slot })
@@ -82,11 +82,11 @@ function Events.on_drag(event)
     to_slot = to_slot and tonumber(to_slot) or nil
     if from_slot and to_slot and type(from_slot) == "number" and type(to_slot) == "number" then
         if from_slot == to_slot then return end
-        local favorites = Storage.get_player_favorites(player)
+        local favorites = Cache.get_player_favorites(player)
         local ok = DragAndDrop.move_slot(favorites, from_slot, to_slot)
         if ok then
             -- Persist and update UI
-            if Storage.save_data then Storage.save_data(Storage.get()) end
+            if Cache.save_data then Cache.save_data(Cache.get_data()) end
             Slots.update_slots(player)
         else
             player.print("[FavoriteTeleport] Cannot move locked slot.")
@@ -114,7 +114,7 @@ function Events.on_player_created(event)
     local player = _G.game.get_player(event.player_index)
     if not player then return end
     -- Ensure favorite slots are initialized for this player
-    local _ = Storage.get_player_favorites(player)
+    local _ = Cache.get_player_favorites(player)
     -- Update the favorites bar GUI for this player
     Slots.update_slots(player)
 end

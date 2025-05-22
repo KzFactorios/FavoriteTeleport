@@ -1,14 +1,14 @@
 -- core/control/lifecycle.lua
 -- Handles mod lifecycle events for FavoriteTeleport
 
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local Context = require("core.context")
 
 local Lifecycle = {}
 
 function Lifecycle.on_init()
-  -- Initialize persistent storage and context
-  Storage.init()
+  -- Initialize persistent cache and context
+  Cache.init()
   Context.init()
 end
 
@@ -19,7 +19,7 @@ end
 
 function Lifecycle.on_configuration_changed(event)
   -- Handle migrations or schema upgrades if needed
-  Storage.init() -- Ensure storage is up to date
+  Cache.init() -- Ensure cache is up to date
   Context.init()
 end
 

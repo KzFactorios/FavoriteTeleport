@@ -1,9 +1,8 @@
--- core/storage/player_favorites.lua
 -- Player favorite slots logic for FavoriteTeleport
 
--- Do not use this module directly! Always use require("core.storage.init") or require("core.storage") for all storage and favorites access.
+-- Do not use this module directly! Always use require("core.cache.init") or require("core.cache") for all cache and favorites access.
 -- This ensures PlayerFavorites.get_player_data is injected properly.
--- If you see an error about get_player_data being nil, update your code to use the storage/init interface.
+-- If you see an error about get_player_data being nil, update your code to use the cache/init interface.
 
 local PlayerFavorites = {}
 local Constants = require("constants")
@@ -27,12 +26,12 @@ local function ensure_favorite_slots_initialized(slots, surface_index)
   return slots
 end
 
--- This function must be injected by the storage/init.lua module:
--- PlayerFavorites.get_player_data = StorageInit.get_player_data
--- If you see an error here, ensure that storage/init.lua sets this up before use.
+-- This function must be injected by the cache/init.lua module:
+-- PlayerFavorites.get_player_data = Cache.get_player_data
+-- If you see an error here, ensure that cache/init.lua sets this up before use.
 function PlayerFavorites.get_player_favorites(player)
   if type(PlayerFavorites.get_player_data) ~= "function" then
-        error("PlayerFavorites.get_player_data is not set. It must be injected by storage/init.lua.")
+        error("PlayerFavorites.get_player_data is not set. It must be injected by cache/init.lua.")
   end
   if type(player) ~= "userdata" or not player.valid or not player.surface or not player.surface.index then return {} end
   local pdata = PlayerFavorites.get_player_data(player)

@@ -2,7 +2,7 @@
 -- Favorite add/remove/update logic for TagEditorGUI
 
 local FavoriteOps = {}
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 local Helpers = require("core.utils.helpers")
 local MapTag = require("core.map_tag")
 local TagSync = require("core.tag_sync.tag_sync_suite")

@@ -20,7 +20,7 @@ constants.events = {
   --SELECTED_FAVE_CHANGED = "selected-fave-changed",
   TELEPORT_TO_FAVORITE = "teleport_to_favorite-",
   ON_OPEN_TAG_EDITOR = "on_open_tag_editor",
-  STORAGE_DUMP = "storage_dump"
+  CACHE_DUMP = "cache_dump"
 }
 
 constants.settings = {

@@ -2,7 +2,7 @@
 -- Tag editor GUI action handlers for FavoriteTeleport
 
 local TagEditorGUIActions = {}
-local Storage = require("core.storage.init")
+local Cache = require("core.cache.init")
 local Helpers = require("core.utils.helpers")
 local MapTag = require("core.map_tag")
 local TagEditorGUIValidation = require("gui.tag_editor_GUI.validation")
@@ -13,7 +13,7 @@ function TagEditorGUIActions.handle_confirm(TagEditorGUI, player)
   local frame = Helpers.find_gui_element_by_name(player, "ft_tag_editor_outer_frame", "ft_tag_editor_frame")
   if not frame then player.print("[FavoriteTeleport] Error: No tag editor frame found"); return end
 
-  -- Always retrieve position from Storage (source of truth)
+  -- Always retrieve position from Cache (source of truth)
   local current_position = TagEditorGUI.get_current_position(player)
   if not current_position or type(current_position) ~= "table" or current_position.x == nil or current_position.y == nil then
     player.print("[FavoriteTeleport] Error: No valid position for tag"); return
@@ -46,6 +46,7 @@ function TagEditorGUIActions.handle_confirm(TagEditorGUI, player)
   end
 
   -- Find or create chart_tag
+  -- Patch: TagEditorGUI.find_create_chart_tag_on_confirm expects gps (string), not MapPosition
   local chart_tag = TagEditorGUI.find_create_chart_tag_on_confirm(player, gps, input)
   if not chart_tag then
     if input.error_label then
@@ -70,7 +71,7 @@ function TagEditorGUIActions.handle_confirm(TagEditorGUI, player)
     TagEditorGUI.remove_favorite(player, gps)
   end
 
-  if Storage.save_data then Storage.save_data(Storage.get()) end
+  if Cache.save_data then Cache.save_data(Cache.get_data()) end
 
   TagEditorGUI.close(player)
 end

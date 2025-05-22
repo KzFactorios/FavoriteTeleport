@@ -4,7 +4,7 @@
 local ContentFrame = {}
 local Rows = require("gui.tag_editor_GUI_builder.rows")
 local Helpers = require("core.utils.helpers")
-local Storage = require("core.storage")
+local Cache = require("core.cache.init")
 
 function ContentFrame.build(parent, builder)
   local content_frame = parent.add {
@@ -27,7 +27,7 @@ function ContentFrame.build(parent, builder)
       style = "ft_teleport_button"
     })
 
-  local available_slots = Storage.get_available_favorite_slots_count(builder.player)
+  local available_slots = Cache.get_available_favorite_slots_count(builder.player)
   local faved = builder.map_tag and builder.map_tag:is_player_favorite(builder.player) or false
   local favorite_enabled = (available_slots > 0) or faved
 

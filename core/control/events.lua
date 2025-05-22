@@ -40,9 +40,9 @@ function Events.register()
     end)
   end
 
-  -- Register storage dump/dev events if needed
-  script.on_event(Constants.events.STORAGE_DUMP, function(event)
-    -- Implement storage dump logic if desired
+  -- Register cache dump/dev events if needed
+  script.on_event(Constants.events.CACHE_DUMP, function(event)
+    -- Implement cache dump logic if desired
   end)
 
   -- Register custom ESC input for GUI stack
