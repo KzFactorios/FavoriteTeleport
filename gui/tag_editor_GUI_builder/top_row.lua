@@ -81,7 +81,7 @@ function TopRow:build(parent, player, chart_tag)
   last_user_action_container.style.vertically_stretchable = false
   last_user_action_container.style.width = 65
   last_user_action_container.style.maximal_width = 65
-  last_user_action_container.style.top_margin = -4
+  last_user_action_container.style.top_margin = -2
   last_user_action_container.style.right_margin = 8
   last_user_action_container.style.bottom_margin = 0
   last_user_action_container.style.left_margin = 0
@@ -102,16 +102,15 @@ function TopRow:build(parent, player, chart_tag)
     style = "te_tr_move_button",
     tooltip = { "ft_tag_editor_move_tooltip_enhanced" },
     enabled = move_btn_enabled,
-    icon_scale = 1.4
+    icon_scale = 0.8
   }
   move_btn.style.width = 16
   move_btn.style.height = 16
+  move_btn.style.padding = 0
   move_btn.style.top_margin = 0
-  move_btn.style.right_margin = 16
+  move_btn.style.right_margin = 12
   move_btn.style.bottom_margin = 0
   move_btn.style.left_margin = 0
-
-  move_btn.style.padding = 0
 
   -- leave the following for debugging
   local delete_btn_enabled = true
@@ -125,17 +124,15 @@ function TopRow:build(parent, player, chart_tag)
     style = "te_tr_delete_button",
     tooltip = { "ft_tag_editor_delete_tooltip" },
     enabled = delete_btn_enabled,
-    icon_scale = 1.0
+    icon_scale = 0.8
   }
   delete_btn.style.width = 16
   delete_btn.style.height = 16
-
+  delete_btn.style.padding = 0
   delete_btn.style.top_margin = 0
   delete_btn.style.right_margin = 0
   delete_btn.style.bottom_margin = 0
   delete_btn.style.left_margin = 0
-
-  delete_btn.style.padding = 0
 
   return top_row_frame
 end

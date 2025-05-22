@@ -131,10 +131,12 @@ gui_style.te_tr_top_row_frame = {
   parent = "frame",
   graphical_set = {
     base = {
-      position = {0, 0},
-      corner_size = 2, -- helps fill space without touching the padding of the parent
+      type = "composition",
+      filename = "__core__/graphics/gui-new.png",
+      position = { 0, 0 },
+      corner_size = 8,
       draw_type = "outer",
-      tint = { r = 0.25, g = 0.25, b = .25, a = 1 }
+      tint = { r = 0.25, g = 0.25, b = 0.25, a = 1 }
     }
   }
 }
@@ -147,38 +149,57 @@ gui_style.te_tr_last_user_label_container = {
 gui_style.te_tr_last_user_action_container = {
   type = "frame_style",
   parent = "invisible_frame",
-  top_padding = 4
+  top_padding = 2
 }
 
 gui_style.te_tr_move_button = {
   type = "button_style",
   parent = "slot_button",
+  width = 20,
+  height = 20,
+  icon_scale = .5,
   default_graphical_set = {
     base = {
-      position = { 136, 0 }, 
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/white_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 0.6, g = 0.6, b = 0.6, a = 1 }
     }
   },
   hovered_graphical_set = {
     base = {
-      position = { 170, 0 }, -- red slot hover background
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/white_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 0.8, g = 0.8, b = 0.8, a = 1 }
     }
   },
   clicked_graphical_set = {
     base = {
-      position = { 204, 0 }, -- red slot pressed background
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/white_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 1, g = 1, b = 1, a = 1 }
     }
   },
   disabled_graphical_set = {
     base = {
-      position = { 238, 0 }, -- red slot disabled background
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/white_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 0.5, g = 0,5, b = 0,5, a = 1 }
     }
   }
 }
@@ -186,32 +207,51 @@ gui_style.te_tr_move_button = {
 gui_style.te_tr_delete_button = {
   type = "button_style",
   parent = "slot_button",
+  width = 20,
+  height = 20,
+  icon_scale = .5,
   default_graphical_set = {
     base = {
-      position = { 136, 0 }, 
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/red_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 0.8, g = 0.8, b = 0.8, a = 1 }
     }
   },
   hovered_graphical_set = {
     base = {
-      position = { 170, 0 }, -- red slot hover background
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/red_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 0.9, g = 0.9, b = 0.9, a = 0 }
     }
   },
   clicked_graphical_set = {
     base = {
-      position = { 204, 0 }, -- red slot pressed background
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/red_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 1, g = 1, b = 1, a = 1 }
     }
   },
   disabled_graphical_set = {
     base = {
-      position = { 238, 0 }, -- red slot disabled background
-      corner_size = 6,
-      draw_type = "outer"
+      filename = "__FavoriteTeleport__/graphics/red_slot_button_20.png",
+      position = { 0, 0 },
+      size = 20,
+      scale = 1,
+      corner_size = 2,
+      draw_type = "outer",
+      tint = { r = 0.4, g = 0.4, b = 0.4, a = 1 }
     }
   }
 }

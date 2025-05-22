@@ -39,3 +39,21 @@ See also: `architecture.md`, `data_schema.md`, `error_handling.md`.
 - If there isn't a viable suppression available, leave a comment explaining the type checker limitation and why the code is safe for runtime/test
 - Always be on the lookout for recursive requires. Ensure we are looking out for too many c levels error
 - keep the codebase maintainable and bug-free. read through the code and propose tasks that would help to achieve this goal.
+
+# Image/Sprite Usage
+- Always verify the existence and path of any image or sprite before including it in code. Use only built-in utility sprites or styles (e.g., `red_slot_button`) for backgrounds and buttons unless a custom image is required.
+- Do not reference deprecated or moved files (e.g., `__core__/graphics/utility/slot.png` or `__core__/graphics/utility/gui.png`) without confirming their presence in the current Factorio version.
+- Prefer using built-in style inheritance (such as `parent = "red_slot_button"`) for destructive buttons, as this is robust and future-proof.
+- If a file-not-found error occurs, check the latest Factorio asset locations and update the code to use the correct built-in style or sprite.
+
+# Button Style Guidelines
+- When using custom images for button styles, ensure the `position` property is not included in the `graphical_set` definitions. The `position` property is only valid for sprite sheets, not standalone PNGs.
+- Use tinting to differentiate button states (e.g., hover, click, disabled) for better visual feedback. For example:
+  - Default: `{ r = 0.8, g = 0.8, b = 0.8, a = 1 }`
+  - Hovered: `{ r = 0.9, g = 0.9, b = 0.9, a = 1 }`
+  - Clicked: `{ r = 0.7, g = 0.7, b = 0.7, a = 1 }`
+  - Disabled: `{ r = 0.6, g = 0.6, b = 0.6, a = 1 }`
+- Always verify the existence of image files (e.g., `graphics/white_slot_button_20.png`) and ensure they are correctly referenced in the mod folder structure.
+
+# Historical Note
+- In May 2025, we resolved repeated mod loading errors by switching from direct image references to using built-in style inheritance (e.g., `parent = "red_slot_button"`). This is the preferred method for Factorio v2 and later.
