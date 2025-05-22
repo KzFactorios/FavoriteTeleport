@@ -10,8 +10,8 @@ gui_style.te_tr_favorite_label = {
   horizontally_stretchable = "off",
   vertically_stretchable = "off",
   font = "default-bold",
-  minimal_width = 120,
-  maximal_width = 120
+  minimal_width = 100,
+  maximal_width = 100
 }
 
 gui_style.te_tr_icon_label = {
@@ -21,8 +21,8 @@ gui_style.te_tr_icon_label = {
   horizontally_stretchable = "off",
   vertically_stretchable = "off",
   font = "default-bold",
-  minimal_width = 120,
-  maximal_width = 120
+  minimal_width = 100,
+  maximal_width = 100
 }
 
 gui_style.te_tr_teleport_label = {
@@ -32,8 +32,8 @@ gui_style.te_tr_teleport_label = {
   horizontally_stretchable = "off",
   vertically_stretchable = "off",
   font = "default-bold",
-  minimal_width = 120,
-  maximal_width = 120
+  minimal_width = 100,
+  maximal_width = 100
 }
 
 gui_style.te_tr_text_label = {
@@ -43,8 +43,8 @@ gui_style.te_tr_text_label = {
   horizontally_stretchable = "off",
   vertically_stretchable = "off",
   font = "default-bold",
-  minimal_width = 120,
-  maximal_width = 120
+  minimal_width = 100,
+  maximal_width = 100
 }
 
 -- Custom save/teleport button style (fixed width, confirm appearance)
@@ -59,8 +59,8 @@ gui_style.ft_confirm_button = {
 gui_style.ft_teleport_button = {
   type = "button_style",
   parent = "confirm_button",
-  minimal_width = 180,
-  maximal_width = 180,
+  minimal_width = 200,
+  maximal_width = 200,
   horizontally_stretchable = "off",
   horizontal_align = "center"
 }
@@ -96,7 +96,7 @@ gui_style.ft_toggle_favorite_mode_button = {
 gui_style.ft_textfield = {
   type = "textbox_style",
   parent = "textbox",
-  width = 180,
+  width = 200,
   horizontally_stretchable = "off"
 }
 
@@ -104,7 +104,7 @@ gui_style.ft_textfield = {
 gui_style.ft_descfield = {
   type = "textbox_style",
   parent = "textbox",
-  width = 180,
+  width = 200,
   horizontally_stretchable = "off"
 }
 

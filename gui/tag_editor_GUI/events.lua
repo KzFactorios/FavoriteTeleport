@@ -1,6 +1,8 @@
 -- Tag editor GUI event handlers
 local TagEditorGUIEvents = {}
 local Storage = require('core.storage')
+local Helpers = require('core.utils.helpers')
+local TagSync = require('core.tag_sync.tag_sync_suite')
 
 local GUICommands = {
   close = function(event, TagEditorGUI, player)
@@ -75,12 +77,39 @@ function TagEditorGUIEvents.on_click(event, TagEditorGUIParam, player)
   elseif name == "ft_tag_editor_favorite_btn" then
     return GUICommands.toggled_favorite_in_place(event, TagEditorGUI_local, player)
   elseif name == "ft_tag_editor_delete_btn" then
+    -- Remove chart_tag, map_tag, and manage favorites for the current tag editor position
+    local tag_editor_positions = Storage.get().tag_editor_positions or {}
+    local pos = tag_editor_positions[player.index]
+    if pos then
+      local gps = Helpers.format_gps(pos.x, pos.y, player.surface.index)
+      TagSync.delete_tag(player, gps)
+    end
+    TagEditorGUI_local.close(player) -- Ensure the tag editor closes after delete
     return GUICommands.delete(event, TagEditorGUI_local, player)
-  elseif name == "ft_tag_editor_save_btn" then
-    return GUICommands.confirm(event, TagEditorGUI_local, player)
   elseif name == "ft_tag_editor_move_btn" then
+    -- Activate move mode: next valid left-click on map will trigger the move
+    local tag_editor_positions = Storage.get().tag_editor_positions or {}
+    local pos = tag_editor_positions[player.index]
+    if pos then
+      -- Set a flag in storage to indicate move mode for this player
+      local storage = Storage.get()
+      storage.ft_tag_editor_move_mode = storage.ft_tag_editor_move_mode or {}
+      storage.ft_tag_editor_move_mode[player.index] = {
+        active = true,
+        surface_index = player.surface.index,
+        gps = Helpers.format_gps(pos.x, pos.y, player.surface.index)
+      }
+      if Storage.save_data then Storage.save_data(storage) end
+      -- The actual rendering of the move marker must be handled in control.lua on the next tick
+      -- (see coding_standards.md for why rendering API is not available here)
+      -- Optionally, show a flying text to indicate move mode
+      player.create_local_flying_text{text = {"ft_tag_editor_move_mode_active"}, position = pos, color = {r=0.7,g=0.7,b=1}}
+    end
+    TagEditorGUI_local.close(player)
     return GUICommands.move(event, TagEditorGUI_local, player)
   end
 end
+
+-- Do NOT register runtime events here! Move marker flow event registration must be in control.lua, not in this GUI event handler file.
 
 return TagEditorGUIEvents

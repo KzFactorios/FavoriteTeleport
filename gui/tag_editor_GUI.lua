@@ -9,8 +9,7 @@ local TagEditorGUIValidation = require("gui.tag_editor_GUI.validation")
 local TagEditorGUIEvents = require("gui.tag_editor_GUI.events")
 local GuiBase = require("gui.gui_base")
 local MapTag = require("core.map_tag")
-local ChartTagOps = require("gui.tag_editor_GUI.chart_tag_ops")
-local FavoriteOps = require("gui.tag_editor_GUI.favorite_ops")
+local TagSync = require("core.tag_sync.tag_sync_suite")
 local Actions = require("gui.tag_editor_GUI.actions")
 
 local TagEditorGUI = {}
@@ -57,16 +56,19 @@ function TagEditorGUI.get_gui_input(frame, player)
   }
 end
 
-TagEditorGUI.find_create_chart_tag_on_confirm = ChartTagOps.find_create_chart_tag_on_confirm
+TagEditorGUI.find_create_chart_tag_on_confirm = TagSync.create_tag
 TagEditorGUI.find_create_map_tag_on_confirm = function(player, gps, chart_tag, input)
-  return ChartTagOps.find_create_map_tag_on_confirm(player, gps, chart_tag, input,
-    TagEditorGUI.get_current_position(player))
+  return TagSync.update_tag(player, gps, input)
 end
 TagEditorGUI.handle_confirm = function(player)
   return Actions.handle_confirm(TagEditorGUI, player)
 end
-TagEditorGUI.update_favorite = FavoriteOps.update_favorite
-TagEditorGUI.remove_favorite = FavoriteOps.remove_favorite
+TagEditorGUI.update_favorite = function(player, gps)
+  return TagSync.sync_favorites(player, gps, true)
+end
+TagEditorGUI.remove_favorite = function(player, gps)
+  return TagSync.sync_favorites(player, gps, false)
+end
 
 --- Handles tag editor actions (confirm, delete, move)
 -- @param player LuaPlayer

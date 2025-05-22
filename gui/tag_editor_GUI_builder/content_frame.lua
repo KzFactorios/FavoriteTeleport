@@ -21,9 +21,9 @@ function ContentFrame.build(parent, builder)
     "te_tr_teleport_label", {
       type = "button",
       name = "ft_tag_editor_pos_btn",
-
-      
-      caption = Helpers.gps_to_map_position_string(builder.gps),
+      caption = builder.gps,
+      tooltip = { "ft_tag_editor_teleport_tooltip", tostring(builder.gps) },
+      --tooltip = "Teleport to " .. tostring(builder.gps),
       style = "ft_teleport_button"
     })
 
@@ -60,7 +60,8 @@ function ContentFrame.build(parent, builder)
   }, { top_margin = 8 })
 
   -- Error label row (hidden by default)
-  local error_row = Rows.add_row(content_frame, "ft_tag_editor_error_row", { "ft_tag_editor_error_label" }, "te_tr_error_label", {
+  local error_row = Rows.add_row(content_frame, "ft_tag_editor_error_row", { "ft_tag_editor_error_label" },
+    "te_tr_error_label", {
     type = "label",
     name = "ft_tag_editor_error_label",
     caption = "",

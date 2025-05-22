@@ -57,3 +57,14 @@ See also: `architecture.md`, `data_schema.md`, `error_handling.md`.
 
 # Historical Note
 - In May 2025, we resolved repeated mod loading errors by switching from direct image references to using built-in style inheritance (e.g., `parent = "red_slot_button"`). This is the preferred method for Factorio v2 and later.
+
+## Localization Placeholders
+- When using Factorio locale placeholders, use double underscores (e.g., `__1__`) for variable substitution, not curly braces or brackets.
+- Example:
+  - In your locale file: `ft_tag_editor_teleport_tooltip=Teleport to __1__`
+  - In Lua: `{ "ft_tag_editor_teleport_tooltip", value }`
+
+This ensures correct variable substitution in all user-facing strings.
+
+Only require modules once at the top of the file.
+Use the already-imported variables (e.g., Helpers, Storage) inside your functions.

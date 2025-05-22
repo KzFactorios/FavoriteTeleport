@@ -30,6 +30,7 @@ function StorageInit.init()
   if type(ft.tag_editor_positions) ~= "table" then ft.tag_editor_positions = {} end
   if type(ft.players) ~= "table" then ft.players = {} end
   if type(ft.surfaces) ~= "table" then ft.surfaces = {} end
+  if type(ft.ft_tag_editor_move_mode) ~= "table" then ft.ft_tag_editor_move_mode = {} end
   StorageInit.inject_player_favorites_dependency()
 end
 
