@@ -1,14 +1,14 @@
 # FavoriteTeleport – Data Schema
 
 ## Overview
-Defines the persistent data structures for the mod, including player favorites, map tags, and settings. All data is managed via the `context` module and is surface-aware.
+Defines the persistent data structures for the mod, including player favorites, map tags, and settings. All data is managed via the `cache` module and is surface-aware.
 
 ---
 
 ## Top-Level Schema
 
 ```lua
-cache = {
+{
   mod_version = "0.0.01",
   tag_editor_positions = {
     [player_index] = position
@@ -22,12 +22,8 @@ cache = {
         [surface_index] = {
           favorites = {
             [slot_number] = {
+              gps = string
               slot_locked = boolean,
-              favorite = {
-                gps = string,
-                slot_locked = boolean 
-                -- ...other favorite fields
-              }
             },
           },
           -- ...other per-surface player data
@@ -37,15 +33,12 @@ cache = {
   },
   surfaces = {
     [surface_index] = {
-      maptags = {
+      map_tags = {
         [gps] = {
-          gps = string,
-          tag = LuaCustomChartTag,
           faved_by_players = { [player_index] = true },
           -- ...other tag fields
         },
       },
-      -- ...other per-surface data
     },
   },
   -- ...other global mod data
@@ -56,10 +49,10 @@ cache = {
 
 ## Player Favorites
 - Each player has a `favorites` table for each surface.
-- Each favorite is keyed by slot number and contains a `favorite` object and a `slot_locked` flag.
+- Each favorite is keyed by slot number and contains a `gps` string and a `slot_locked` flag.
 
 ## Map Tags
-- Cached per-surface in `surfaces[surface_index].maptags`.
+- Cached per-surface in `surfaces[surface_index].map_tags`.
 - Each tag tracks which players have favorited it via `faved_by_players`.
 
 ## Settings
